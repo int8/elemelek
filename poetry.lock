@@ -1091,6 +1091,24 @@ files = [
 ]
 
 [[package]]
+name = "language-tool-python"
+version = "2.8"
+description = "Checks grammar using LanguageTool."
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "language_tool_python-2.8-py3-none-any.whl", hash = "sha256:0755042211e41307f58ab2e779fe2aaf0e6f6a64a2f05b088723d7da5f21e295"},
+    {file = "language_tool_python-2.8.tar.gz", hash = "sha256:739b84d95f7d7ed3d2c8bca389c1b80f7e7871059f24842320b614723872a75c"},
+]
+
+[package.dependencies]
+pip = "*"
+requests = "*"
+tqdm = "*"
+wheel = "*"
+
+[[package]]
 name = "markupsafe"
 version = "2.1.5"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -1855,6 +1873,18 @@ mic = ["olefile"]
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 typing = ["typing-extensions"]
 xmp = ["defusedxml"]
+
+[[package]]
+name = "pip"
+version = "24.0"
+description = "The PyPA recommended tool for installing Python packages."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pip-24.0-py3-none-any.whl", hash = "sha256:ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc"},
+    {file = "pip-24.0.tar.gz", hash = "sha256:ea9bd1a847e8c5774a5777bb398c19e80bcd4e2aa16a4b301b718fe6f593aba2"},
+]
 
 [[package]]
 name = "platformdirs"
@@ -3433,6 +3463,21 @@ optional = ["python-socks", "wsaccel"]
 test = ["websockets"]
 
 [[package]]
+name = "wheel"
+version = "0.43.0"
+description = "A built-package format for Python"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "wheel-0.43.0-py3-none-any.whl", hash = "sha256:55c570405f142630c6b9f72fe09d9b67cf1477fcf543ae5b8dcb1f5b7377da81"},
+    {file = "wheel-0.43.0.tar.gz", hash = "sha256:465ef92c69fa5c5da2d1cf8ac40559a8c940886afcef87dcf14b9470862f1d85"},
+]
+
+[package.extras]
+test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
+
+[[package]]
 name = "widgetsnbextension"
 version = "4.0.10"
 description = "Jupyter interactive widgets for Jupyter Notebook"
@@ -3463,4 +3508,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "9367ca8c7d026a5b9fdf28a0694d037ca768ecd1118da64a607642b47e40c0ee"
+content-hash = "2c943361fd9cad9128720354e2b8942afa80c13ee90bc55bc97044ae4c68d249"
