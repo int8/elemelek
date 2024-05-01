@@ -1,0 +1,21 @@
+dataset_jsonl_path: /path/to/instructions/file.jsonl
+db:
+  database_insert_batch_size: 100
+semantic_index:
+  embeddings_model_name: sdadas/st-polish-paraphrase-from-distilroberta
+  embeddings_computation_batch_size: 3
+  metric: cos
+  connectivity: 64
+  dtype: 'f32'
+  expansion_add: 128
+  expansion_search: 256
+  n_clusters: 2
+features:
+  basic: true
+  reranker:
+    model_name: sdadas/polish-reranker-base-ranknet
+    batch_size: 16
+    strategy: truncate
+  language_tool:
+    nr_of_threads: 4
+    lang: pl-PL
