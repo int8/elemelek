@@ -12,6 +12,17 @@ from elemelek.model import (
     InstructionFeature,
     CustomExtractorDefinition,
 )
+from elemelek.settings import (
+    RERANKER_RELEVANCE_SCORE,
+    MEDIAN_WORD_LENGTH,
+    QUANTILE_WORD_LENGTH_09,
+    QUANTILE_WORD_LENGTH_01,
+    TOTAL_LENGTH,
+    IS_QUESTION,
+    HAS_INPUT,
+    NUMERIC_CHARS_RATIO,
+    NON_ALPHA_NUMERIC_CHARS_RATIO,
+)
 from elemelek.utils import divide_dict, language_tool_scan
 import concurrent.futures
 
@@ -42,42 +53,42 @@ class BasicFeaturesExtractor(InstructionFeatureExtractor):
 
         return [
             InstructionFeature(
-                name="median_word_length",
+                name=MEDIAN_WORD_LENGTH,
                 value=np.median(word_lengths),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="quantile_0.9_word_length",
+                name=QUANTILE_WORD_LENGTH_09,
                 value=np.quantile(word_lengths, 0.9),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="quantile_0.1_word_length",
+                name=QUANTILE_WORD_LENGTH_01,
                 value=np.quantile(word_lengths, 0.1),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="total_length",
+                name=TOTAL_LENGTH,
                 value=len(instruction.text),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="is_question",
+                name=IS_QUESTION,
                 value=instruction.is_question(),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="has_input",
+                name=HAS_INPUT,
                 value=instruction.input is not None,
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="numeric_chars_ratio",
+                name=NUMERIC_CHARS_RATIO,
                 value=numeric_chars / len(instruction.text),
                 instruction_id=instruction.id,
             ),
             InstructionFeature(
-                name="non_alpha_numeric_chars_ratio",
+                name=NON_ALPHA_NUMERIC_CHARS_RATIO,
                 value=non_alpha_num_chars / len(instruction.text),
                 instruction_id=instruction.id,
             ),
@@ -137,7 +148,7 @@ class RerankerRelevanceScoreFeatureExtractor(InstructionFeatureExtractor):
         )
         return InstructionFeature(
             instruction_id=instruction.id,
-            name="reranker-relevance-score",
+            name=RERANKER_RELEVANCE_SCORE,
             value=float(results[0]),
         )
 
@@ -161,7 +172,7 @@ class RerankerRelevanceScoreFeatureExtractor(InstructionFeatureExtractor):
 
             results += [
                 InstructionFeature(
-                    name="reranker-relevance-score",
+                    name=RERANKER_RELEVANCE_SCORE,
                     value=float(batch_results[i]),
                     instruction_id=b.id,
                 )

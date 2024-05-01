@@ -14,8 +14,14 @@ from elemelek.features import (
 )
 from elemelek.index import InstructionsSemanticIndex
 from elemelek.logging import SelfLogging
-from elemelek.model import Instruction
-from elemelek.settings import ELEMELEK_ARTIFACTS_PATH, ElemelekConfig
+from elemelek.model import Instruction, SamplingStrategy
+from elemelek.settings import (
+    ELEMELEK_ARTIFACTS_PATH,
+    Egg,
+    RERANKER_RELEVANCE_SCORE,
+    TOTAL_LENGTH,
+    LANGUAGE_TOOL_CHECK,
+)
 from elemelek.utils import calculate_file_md5
 
 
@@ -34,11 +40,20 @@ class Elemelek(SelfLogging):
         return os.path.join(ELEMELEK_ARTIFACTS_PATH, self.__dataset_id)
 
     @property
-    def config_path(self):
-        return os.path.join(self.dataset_artifacts_path, "config.yaml")
+    def index_dir_path(self):
+        return os.path.join(self.dataset_artifacts_path, "index")
+
+    @staticmethod
+    def list_datasets():
+        return os.listdir(ELEMELEK_ARTIFACTS_PATH)
+
+    @staticmethod
+    def remove_dataset(dataset_id: str):
+        if os.path.exists(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id)):
+            shutil.rmtree(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id))
 
     @classmethod
-    def from_config(cls, config: ElemelekConfig):
+    def hatch(cls, config: Egg):
         dataset_id = calculate_file_md5(config.dataset_jsonl_path)
         try:
             if dataset_id in Elemelek.list_datasets():
@@ -50,6 +65,11 @@ class Elemelek(SelfLogging):
                 elemelek._db,
                 model_name=config.semantic_index.embeddings_model_name,
                 batch_size=config.semantic_index.embeddings_computation_batch_size,
+                dtype=config.semantic_index.dtype,
+                metric=config.semantic_index.metric,
+                connectivity=config.semantic_index.connectivity,
+                expansion_add=config.semantic_index.expansion_add,
+                expansion_search=config.semantic_index.expansion_search,
             )
             elemelek._index.cluster(k=config.semantic_index.n_clusters)
             if config.features.basic:
@@ -68,19 +88,6 @@ class Elemelek(SelfLogging):
         except Exception as e:
             Elemelek.remove_dataset(dataset_id)
             raise e
-
-    @staticmethod
-    def list_datasets():
-        return os.listdir(ELEMELEK_ARTIFACTS_PATH)
-
-    @staticmethod
-    def remove_dataset(dataset_id: str):
-        if os.path.exists(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id)):
-            shutil.rmtree(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id))
-
-    @property
-    def index_dir_path(self):
-        return os.path.join(self.dataset_artifacts_path, "index")
 
     def extract_basic_features(self):
         extractor = BasicFeaturesExtractor()
@@ -115,3 +122,21 @@ class Elemelek(SelfLogging):
 
     def to_pandas(self):
         return pd.DataFrame([elem.to_flat_dict() for elem in self._db])
+
+    def sample(self, sampling_strategy: SamplingStrategy):
+        df = self.to_pandas()
+        relevance_scores = df[f"feature_{RERANKER_RELEVANCE_SCORE}"]
+
+        accepted = (relevance_scores > sampling_strategy.min_rerank_relevance) & (
+            relevance_scores < sampling_strategy.max_rerank_relevance
+        )
+        df = df[accepted]
+        df = df[df[f"feature_{TOTAL_LENGTH}"] > 0]
+        mistakes_s = df[f"feature_{LANGUAGE_TOOL_CHECK}"].map(lambda x: sum(x.values()))
+        lengths_s = df[f"feature_{TOTAL_LENGTH}"]
+
+        accepted = (
+            mistakes_s / lengths_s
+        ) > sampling_strategy.lang_mistakes_length_ratio_max
+
+        df = df[accepted]

@@ -26,6 +26,17 @@ INPUT_FIELD = "input"
 OUTPUT_FIELD = "output"
 MANDATORY_FIELDS = {INSTRUCTION_FIELD, INPUT_FIELD, OUTPUT_FIELD}
 
+RERANKER_RELEVANCE_SCORE = "reranker-relevance-score"
+LANGUAGE_TOOL_CHECK = "language_tool_check"
+MEDIAN_WORD_LENGTH = "median_word_length"
+QUANTILE_WORD_LENGTH_09 = "quantile_0.9_word_length"
+QUANTILE_WORD_LENGTH_01 = "quantile_0.1_word_length"
+TOTAL_LENGTH = "total_length"
+IS_QUESTION = "is_question"
+HAS_INPUT = "has_input"
+NUMERIC_CHARS_RATIO = "numeric_chars_ratio"
+NON_ALPHA_NUMERIC_CHARS_RATIO = "non_alpha_numeric_chars_ratio"
+
 
 @dataclasses.dataclass
 class DBConfig:
@@ -65,7 +76,7 @@ class FeaturesConfig:
 
 
 @dataclasses.dataclass
-class ElemelekConfig:
+class Egg:
     dataset_jsonl_path: str
     db: DBConfig
     semantic_index: SemanticIndexConfig
@@ -81,9 +92,13 @@ class ElemelekConfig:
             semantic_index=SemanticIndexConfig(**config_data["semantic_index"]),
             features=FeaturesConfig(
                 basic=config_data["features"]["basic"],
-                reranker=RerankerConfig(**config_data["features"]["reranker"]),
+                reranker=RerankerConfig(**config_data["features"]["reranker"])
+                if config_data["features"]["reranker"]
+                else None,
                 language_tool=LanguageToolConfig(
                     **config_data["features"]["language_tool"]
-                ),
+                )
+                if config_data["features"]["language_tool"]
+                else None,
             ),
         )

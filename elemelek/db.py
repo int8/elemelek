@@ -2,7 +2,7 @@ import json
 import os
 import sqlite3
 import traceback
-from typing import List, Dict
+from typing import List, Dict, Callable, Any, Set
 
 import pandas as pd
 from tqdm import tqdm
@@ -33,6 +33,13 @@ class InMemoryFeatures(SelfLogging):
 
         if save:
             self.save()
+
+    def filter(self, feature_name, f: Callable[[Any], bool]) -> Set[int]:
+        accepted_instuctions = set()
+        for instruction_id in self._data:
+            if f(self._data[instruction_id][feature_name]):
+                accepted_instuctions.add(instruction_id)
+        return accepted_instuctions
 
     def save(self):
         with open(self.features_json_path, "w") as f:

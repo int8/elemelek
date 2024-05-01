@@ -68,9 +68,22 @@ class Instruction:
         }
 
 
+@dataclasses.dataclass
 class CustomExtractorDefinition:
     name: str
     f: Callable[[Instruction], InstructionFeature]
+
+
+@dataclasses.dataclass
+class SamplingStrategy:
+    max_size: float
+    min_rerank_relevance: float
+    max_rerank_relevance: float
+    lang_mistakes_length_ratio_max: float
+    inner_cluster_target_median_cossim: float
+    always_include_centroids: bool
+    min_elements_per_cluster: int
+    big_clusters_first: bool
 
 
 class EmbeddingComputationStrategy(enum.Enum):

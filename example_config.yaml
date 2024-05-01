@@ -5,7 +5,7 @@ semantic_index:
   embeddings_model_name: sdadas/st-polish-paraphrase-from-distilroberta
   embeddings_computation_batch_size: 3
   metric: cos
-  connectivity: 64
+  connectivity: 128
   dtype: 'f32'
   expansion_add: 128
   expansion_search: 256
@@ -16,6 +16,4 @@ features:
     model_name: sdadas/polish-reranker-base-ranknet
     batch_size: 16
     strategy: truncate
-  language_tool:
-    nr_of_threads: 4
-    lang: pl-PL
+  language_tool: false

@@ -61,13 +61,14 @@ class InstructionsSemanticIndex(SelfLogging):
         model_name: str,
         batch_size: int = 1000,
         force: bool = False,
+        **usearch_kwargs,
     ):
         self.__model_name = model_name
         if force or not self.index:
             self._compute_embeddings(
                 instructions, EmbeddingComputationStrategy.TRUNCATE, batch_size
             )
-            self.index = self._build_index()
+            self.index = self._build_index(**usearch_kwargs)
         else:
             self.info(
                 f"Index at {self.index_path} already loaded. "

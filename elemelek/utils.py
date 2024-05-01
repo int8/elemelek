@@ -5,6 +5,7 @@ from typing import List, Dict
 import language_tool_python
 
 from elemelek.model import InstructionFeature
+from elemelek.settings import LANGUAGE_TOOL_CHECK
 
 
 def calculate_file_md5(file_path: str, block_size=8192):
@@ -52,22 +53,12 @@ def language_tool_scan(
             matches = language_tool.check(instruction.text)
             results[key] = InstructionFeature(
                 instruction_id=instruction.id,
-                name="language_tool_check",
+                name=LANGUAGE_TOOL_CHECK,
                 value=Counter([m.ruleId for m in matches]),
             )
+
     finally:
         if language_tool:
             language_tool.close()
 
     return results
-
-
-def in_notebook():
-    try:
-        from IPython import get_ipython
-
-        if "IPKernelApp" not in get_ipython().config:  # Check if under IPython kernel
-            return False
-    except:
-        return False
-    return True
