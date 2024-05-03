@@ -113,11 +113,14 @@ class InstructionsDB(SelfLogging, Sequence):
     def __iter__(self):
         return self.__yield_rows()
 
-    def __getitem__(self, idx: int | slice) -> Instruction | List[Instruction]:
+    def __getitem__(self, idx: int | slice | list) -> Instruction | List[Instruction]:
         cur = self.conn.cursor()
 
-        if isinstance(idx, slice):
-            indices = str(tuple(range(0, len(self)))[idx])
+        if isinstance(idx, slice) or isinstance(idx, list):
+            if isinstance(idx, slice):
+                indices = str(tuple(range(0, len(self)))[idx])
+            else:
+                indices = idx
             res = cur.execute(
                 f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" in {indices}'
             )
@@ -172,6 +175,13 @@ class InstructionsDB(SelfLogging, Sequence):
                     features=self.features.get_features(instruction_id=id_),
                 )
         cursor.close()
+
+    @property
+    def ids(self) -> List[int]:
+        cursor = self.conn.cursor()
+        res = cursor.execute(f'SELECT "index" FROM {self.dataset_table_name}')
+        rows = res.fetchall()
+        return [row[0] for row in rows]
 
     def clean(self):
         cur = self.conn.cursor()

@@ -1,23 +1,96 @@
+import dataclasses
 import json
+import math
 import os
+import random
 import shutil
 from functools import cached_property
-from typing import List, Sequence
+from typing import List, Sequence, Set
+
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from usearch.index import Index
+
+from elemelek.genetic import GeneticAlgorithm
 from elemelek.logging import SelfLogging
 from elemelek.model import (
     EmbeddingComputationStrategy,
-    InstructionsCluster,
     Instruction,
 )
 from elemelek.utils import calculate_text_chunk_md5
 
 
 from tqdm import tqdm
+
+
+@dataclasses.dataclass
+class InstructionsCluster:
+    centroid_id: int
+    elements_ids: List[int]
+
+    def dict(self):
+        return dataclasses.asdict(self)
+
+    def keep(self, ids: Set[int]) -> "InstructionsCluster":
+        return InstructionsCluster(
+            centroid_id=self.centroid_id,
+            elements_ids=[e for e in self.elements_ids if e in ids],
+        )
+
+    def random_sample(self, n: int):
+        return random.sample(self.elements_ids, n)
+
+    def get_semantically_similar_sample(
+        self,
+        index: "InstructionsSemanticIndex",
+        k: int,
+        target_similarity_median: float,
+    ) -> "InstructionsCluster":
+        similarity_matrix = index.index.pairwise_distance(
+            self.elements_ids, self.elements_ids
+        )
+        ga = GeneticAlgorithm(
+            similarity_matrix,
+            target_similarity_median,
+            population_size=100,
+            k=k - 1,
+            max_gen=50,
+            mutation_rate=0.1,
+        )
+        solution = ga.optimize()
+        return InstructionsCluster(
+            centroid_id=self.centroid_id, elements_ids=solution + [self.centroid_id]
+        )
+
+    def __len__(self):
+        return len(self.elements_ids)
+
+    @staticmethod
+    def get_samples_per_cluster(
+        clustering: List["InstructionsCluster"], k: int
+    ) -> List[int]:
+        num_clusters = len(clustering)
+        ideal_samples_per_cluster = math.floor(k / num_clusters)
+
+        num_per_cluster = [
+            min(len(cluster), ideal_samples_per_cluster) for cluster in clustering
+        ]
+
+        total_samples_from_uniform = sum(num_per_cluster)
+
+        remaining_samples = k - total_samples_from_uniform
+
+        while remaining_samples > 0:
+            for i, cluster in enumerate(clustering):
+                if num_per_cluster[i] < len(cluster) and remaining_samples > 0:
+                    num_per_cluster[i] += 1
+                    remaining_samples -= 1
+                if remaining_samples <= 0:
+                    break
+
+        return num_per_cluster
 
 
 class InstructionsSemanticIndex(SelfLogging):
@@ -75,7 +148,7 @@ class InstructionsSemanticIndex(SelfLogging):
                 f"If you want to rebuild pass force = True"
             )
 
-    def cluster(self, k: int = None):
+    def cluster(self, k: int = None) -> List[InstructionsCluster]:
         if not self.index:
             raise ValueError("Build  your index first via build()")
 

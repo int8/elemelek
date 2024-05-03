@@ -5,15 +5,6 @@ from typing import Optional, Any, List, Callable
 
 
 @dataclasses.dataclass
-class InstructionsCluster:
-    centroid_id: int
-    elements_ids: List[int]
-
-    def dict(self):
-        return dataclasses.asdict(self)
-
-
-@dataclasses.dataclass
 class InstructionFeature:
     instruction_id: int
     name: str
@@ -74,16 +65,9 @@ class CustomExtractorDefinition:
     f: Callable[[Instruction], InstructionFeature]
 
 
-@dataclasses.dataclass
-class SamplingStrategy:
-    max_size: float
-    min_rerank_relevance: float
-    max_rerank_relevance: float
-    lang_mistakes_length_ratio_max: float
-    inner_cluster_target_median_cossim: float
-    always_include_centroids: bool
-    min_elements_per_cluster: int
-    big_clusters_first: bool
+class SubsetChoiceMethod(enum):
+    RANDOM = "RANDOM"
+    TARGET_MEDIAN_SIMILARITY = "TARGET_MEDIAN_SIMILARITY"
 
 
 class EmbeddingComputationStrategy(enum.Enum):

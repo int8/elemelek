@@ -1,6 +1,7 @@
 import os
+import random
 import shutil
-from typing import List
+from typing import List, Callable
 
 import pandas as pd
 import torch
@@ -12,28 +13,26 @@ from elemelek.features import (
     RerankerRelevanceScoreFeatureExtractor,
     MultiThreadedLanguageToolFeatureExtractor,
 )
-from elemelek.index import InstructionsSemanticIndex
+from elemelek.index import InstructionsSemanticIndex, InstructionsCluster
 from elemelek.logging import SelfLogging
-from elemelek.model import Instruction, SamplingStrategy
-from elemelek.settings import (
-    ELEMELEK_ARTIFACTS_PATH,
-    Egg,
-    RERANKER_RELEVANCE_SCORE,
-    TOTAL_LENGTH,
-    LANGUAGE_TOOL_CHECK,
-)
+from elemelek.model import Instruction, SubsetChoiceMethod
+from elemelek.settings import ELEMELEK_ARTIFACTS_PATH, Egg
 from elemelek.utils import calculate_file_md5
 
 
+class InstructionsClustering:
+    pass
+
+
 class Elemelek(SelfLogging):
-    def __init__(
-        self,
-        dataset_id: str,
-    ):
+    def __init__(self, dataset_id: str, config: Egg):
         self.__dataset_id = dataset_id
         os.makedirs(self.dataset_artifacts_path, exist_ok=True)
-        self._db = InstructionsDB(self.dataset_artifacts_path)
-        self._index = InstructionsSemanticIndex(self.index_dir_path)
+
+        self.db = InstructionsDB(self.dataset_artifacts_path)
+        self.index = InstructionsSemanticIndex(self.index_dir_path)
+        self.config = config
+        self._clustering = None
 
     @property
     def dataset_artifacts_path(self):
@@ -42,6 +41,10 @@ class Elemelek(SelfLogging):
     @property
     def index_dir_path(self):
         return os.path.join(self.dataset_artifacts_path, "index")
+
+    @property
+    def clustering(self) -> list[InstructionsCluster]:
+        return self.index.cluster(k=self.config.semantic_index.n_clusters)
 
     @staticmethod
     def list_datasets():
@@ -57,12 +60,12 @@ class Elemelek(SelfLogging):
         dataset_id = calculate_file_md5(config.dataset_jsonl_path)
         try:
             if dataset_id in Elemelek.list_datasets():
-                return cls(dataset_id)
+                return cls(dataset_id, config=config)
 
-            elemelek = cls(dataset_id)
-            elemelek._db.load_jsonl(config.dataset_jsonl_path)
-            elemelek._index.build(
-                elemelek._db,
+            elemelek = cls(dataset_id, config=config)
+            elemelek.db.load_jsonl(config.dataset_jsonl_path)
+            elemelek.index.build(
+                elemelek.db,
                 model_name=config.semantic_index.embeddings_model_name,
                 batch_size=config.semantic_index.embeddings_computation_batch_size,
                 dtype=config.semantic_index.dtype,
@@ -71,7 +74,8 @@ class Elemelek(SelfLogging):
                 expansion_add=config.semantic_index.expansion_add,
                 expansion_search=config.semantic_index.expansion_search,
             )
-            elemelek._index.cluster(k=config.semantic_index.n_clusters)
+
+            elemelek.index.cluster(k=config.semantic_index.n_clusters)
             if config.features.basic:
                 elemelek.extract_basic_features()
             if config.features.reranker:
@@ -91,8 +95,8 @@ class Elemelek(SelfLogging):
 
     def extract_basic_features(self):
         extractor = BasicFeaturesExtractor()
-        features = extractor.extract_many(self._db)
-        self._db.insert_features(features)
+        features = extractor.extract_many(self.db)
+        self.db.insert_features(features)
 
     def extract_rerank_relevancy(
         self, reranker_model_name: str, reranker_batch_size: int
@@ -106,37 +110,103 @@ class Elemelek(SelfLogging):
         extractor = RerankerRelevanceScoreFeatureExtractor(
             encoder, batch_size=reranker_batch_size
         )
-        features = extractor.extract_many(self._db)
-        self._db.insert_features(features)
+        features = extractor.extract_many(self.db)
+        self.db.insert_features(features)
 
     def extract_lang_mistakes(self, lang: str, nr_of_threads: int):
         extractor = MultiThreadedLanguageToolFeatureExtractor(
             lang_code=lang, nr_of_threads=nr_of_threads
         )
-        features = extractor.extract_many(self._db)
-        self._db.insert_features(features)
+        features = extractor.extract_many(self.db)
+        self.db.insert_features(features)
 
     def search(self, query: str, k: int = 10) -> List[Instruction]:
-        instruction_ids = self._index.search(query, k)
-        return [self._db[int(idx)] for idx in instruction_ids]
+        instruction_ids = self.index.search(query, k)
+        return [self.db[int(idx)] for idx in instruction_ids]
 
     def to_pandas(self):
-        return pd.DataFrame([elem.to_flat_dict() for elem in self._db])
+        return pd.DataFrame([elem.to_flat_dict() for elem in self.db])
 
-    def sample(self, sampling_strategy: SamplingStrategy):
-        df = self.to_pandas()
-        relevance_scores = df[f"feature_{RERANKER_RELEVANCE_SCORE}"]
+    def get_sampler(self, randomize: bool = False):
+        return ElemelekSampler(self, self.db.ids, randomize=randomize)
 
-        accepted = (relevance_scores > sampling_strategy.min_rerank_relevance) & (
-            relevance_scores < sampling_strategy.max_rerank_relevance
-        )
-        df = df[accepted]
-        df = df[df[f"feature_{TOTAL_LENGTH}"] > 0]
-        mistakes_s = df[f"feature_{LANGUAGE_TOOL_CHECK}"].map(lambda x: sum(x.values()))
-        lengths_s = df[f"feature_{TOTAL_LENGTH}"]
 
-        accepted = (
-            mistakes_s / lengths_s
-        ) > sampling_strategy.lang_mistakes_length_ratio_max
+class ElemelekSampler(SelfLogging):
+    def __init__(self, elemelek: Elemelek, ids: List[int], randomize: bool = False):
+        self.elemelek = elemelek
+        if randomize:
+            random.shuffle(ids)
+        self.ids = ids
 
-        df = df[accepted]
+    def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSampler":
+        filtered_ids = list()
+        for instruction in self.elemelek.db[self.ids]:
+            if f(instruction):
+                filtered_ids.append(instruction.id)
+        return ElemelekSampler(self.elemelek, filtered_ids)
+
+    def get_diverse_subset(
+        self, k: int, method: SubsetChoiceMethod, **kwargs
+    ) -> "ElemelekSampler":
+        if len(self.ids) <= k:
+            self.info(f"Your current subset has less than {k} elements")
+            return self
+
+        return_ids = []
+        clustering = [
+            cluster.keep(set(self.ids)) for cluster in self.elemelek.clustering
+        ]
+        clustering = [c for c in clustering if len(c) > 0]
+        samples_per_cluster = InstructionsCluster.get_samples_per_cluster(clustering, k)
+        if method == SubsetChoiceMethod.RANDOM:
+            for i, c in enumerate(clustering):
+                return_ids += c.random_sample(samples_per_cluster[i])
+
+        if method == SubsetChoiceMethod.TARGET_MEDIAN_SIMILARITY:
+            target_median = kwargs.get("target_median")
+            if target_median is None:
+                raise ValueError(
+                    f"Please provide float target_median "
+                    f"parameter when  choosing {method}"
+                )
+            for i, c in enumerate(clustering):
+                return_ids += c.random_sample(samples_per_cluster[i])
+
+        return ElemelekSampler(self.elemelek, return_ids)
+
+    def sample_uniform_numeric(
+        self, feature_name: str, k: int, bins: int = 50
+    ) -> "ElemelekSampler":
+        if len(self.ids) <= k:
+            self.info(f"Your current subset has less than {k} elements")
+            return self
+        values = []
+        indices = []
+        for instruction in self.elemelek.db[self.ids]:
+            values.append(instruction[feature_name])
+            indices.append(instruction.id)
+        s = pd.Series(values, index=indices)
+        data_binned, bins = pd.cut(s, bins=bins, labels=False, retbins=True)
+        bin_counts = pd.Series(data_binned).value_counts(normalize=True)
+        weights = 1 / bin_counts[data_binned]
+        weights = weights / weights.sum()
+        sampled_ids = s.sample(n=k, weights=weights).index.values.tolist()
+        return ElemelekSampler(self.elemelek, sampled_ids)
+
+    def sample_uniform_categorical(
+        self, feature_name: str, k: int
+    ) -> "ElemelekSampler":
+        if len(self.ids) <= k:
+            self.info(f"Your current subset has less than {k} elements")
+            return self
+        values = []
+        indices = []
+        for instruction in self.elemelek.db[self.ids]:
+            values.append(instruction[feature_name])
+            indices.append(instruction.id)
+        s = pd.Series(values, index=indices)
+        category_counts = s.value_counts(normalize=True)
+        weights = 1 / category_counts[s]
+        weights = weights / weights.sum()
+        sampled_ids = s.sample(n=k, weights=weights).index.values.tolist()
+        return ElemelekSampler(self.elemelek, sampled_ids)
