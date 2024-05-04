@@ -161,10 +161,12 @@ class ElemelekSampler(SelfLogging):
         clustering = [
             cluster.keep(set(self.ids)) for cluster in self.elemelek.clustering
         ]
+        print(clustering)
         clustering = [c for c in clustering if len(c) > 0]
         samples_per_cluster = InstructionsCluster.get_samples_per_cluster(clustering, k)
+        print(samples_per_cluster)
         if method == SubsetChoiceMethod.RANDOM:
-            for i, c in enumerate(clustering):
+            for i, c in tqdm(enumerate(clustering)):
                 return_ids += c.random_sample(samples_per_cluster[i])
 
         if method == SubsetChoiceMethod.TARGET_MEDIAN_SIMILARITY:
@@ -178,29 +180,6 @@ class ElemelekSampler(SelfLogging):
                 return_ids += c.random_sample(samples_per_cluster[i])
 
         return ElemelekSampler(self.elemelek, return_ids)
-
-    def sample_uniform_numeric(
-        self, feature_name: str, k: int, bins: int = 50
-    ) -> "ElemelekSampler":
-        if len(self.ids) <= k:
-            self.info(f"Your current subset has less than {k} elements")
-            return self
-        values = []
-        indices = []
-        for instruction in tqdm(
-            self.elemelek.db[self.ids],
-            desc=f"retrieving values of {feature_name}",
-            total=len(self.ids),
-        ):
-            values.append(instruction.get_feature(feature_name).value)
-            indices.append(instruction.id)
-        s = pd.Series(values, index=indices)
-        data_binned, bins = pd.cut(s, bins=bins, labels=False, retbins=True)
-        bin_counts = pd.Series(data_binned).value_counts(normalize=True)
-        weights = 1 / bin_counts[data_binned]
-        weights = weights / weights.sum()
-        sampled_ids = s.sample(n=k, weights=weights).index.values.tolist()
-        return ElemelekSampler(self.elemelek, sampled_ids)
 
     def sample_uniform_categorical(
         self, feature_name: str, k: int
@@ -218,12 +197,11 @@ class ElemelekSampler(SelfLogging):
             values.append(instruction.get_feature(feature_name).value)
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
-        self.info("pd Series created")
         category_counts = s.value_counts(normalize=True)
-        self.info("category counts computed")
         weights = 1 / category_counts[s]
         weights = weights / weights.sum()
-        self.info("weights computed")
-        sampled_ids = s.sample(n=k, weights=weights).index.values.tolist()
-        self.info("samples fetched ")
+        sampled_ids = s.sample(
+            n=k, weights=pd.Series(weights.values, index=s.index)
+        ).index.values.tolist()
+
         return ElemelekSampler(self.elemelek, sampled_ids)
