@@ -185,7 +185,9 @@ class ElemelekSampler(SelfLogging):
             return self
         values = []
         indices = []
-        for instruction in self.elemelek.db[self.ids]:
+        for instruction in tqdm(
+            self.elemelek.db[self.ids], desc=f"retrieving values of {feature_name}"
+        ):
             values.append(instruction.get_feature(feature_name))
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
@@ -204,7 +206,9 @@ class ElemelekSampler(SelfLogging):
             return self
         values = []
         indices = []
-        for instruction in self.elemelek.db[self.ids]:
+        for instruction in tqdm(
+            self.elemelek.db[self.ids], desc=f"retrieving values of {feature_name}"
+        ):
             values.append(instruction.get_feature(feature_name))
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
