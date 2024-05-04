@@ -158,9 +158,8 @@ class ElemelekSampler(SelfLogging):
             return self
         self.info("X")
         return_ids = []
-        clustering = [
-            cluster.keep(set(self.ids)) for cluster in self.elemelek.clustering
-        ]
+        ids_set = set(self.ids)
+        clustering = [cluster.keep(ids_set) for cluster in self.elemelek.clustering]
         self.info(clustering)
         clustering = [c for c in clustering if len(c) > 0]
         samples_per_cluster = InstructionsCluster.get_samples_per_cluster(clustering, k)
