@@ -176,7 +176,11 @@ class ElemelekSampler(SelfLogging):
                     f"parameter when  choosing {method}"
                 )
             for i, c in enumerate(clustering):
-                return_ids += c.random_sample(samples_per_cluster[i])
+                return_ids += c.get_semantically_similar_sample(
+                    index=self.elemelek.index,
+                    k=samples_per_cluster[i],
+                    target_similarity_median=target_median,
+                )
 
         return ElemelekSampler(self.elemelek, return_ids)
 
