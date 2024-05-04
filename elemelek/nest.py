@@ -18,7 +18,7 @@ from elemelek.index import InstructionsSemanticIndex, InstructionsCluster
 from elemelek.logging import SelfLogging
 from elemelek.model import Instruction, SubsetChoiceMethod
 from elemelek.settings import ELEMELEK_ARTIFACTS_PATH, Egg
-from elemelek.utils import calculate_file_md5
+from elemelek.utils import calculate_file_md5, stratified_sample
 
 
 class InstructionsClustering:
@@ -129,15 +129,18 @@ class Elemelek(SelfLogging):
         return pd.DataFrame([elem.to_flat_dict() for elem in self.db])
 
     def as_sample(self, randomize: bool = False):
-        return ElemelekSample(self, self.db.ids, randomize=randomize)
+        return ElemelekSample(self, self.db.ids, shuffle=randomize)
 
 
 class ElemelekSample(SelfLogging):
-    def __init__(self, elemelek: Elemelek, ids: List[int], randomize: bool = False):
+    def __init__(self, elemelek: Elemelek, ids: List[int], shuffle: bool = False):
         self.elemelek = elemelek
-        if randomize:
-            random.shuffle(ids)
         self.ids = ids
+        if shuffle:
+            self.shuffle()
+
+    def shuffle(self):
+        random.shuffle(self.ids)
 
     def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSample":
         filtered_ids = list()
@@ -198,11 +201,5 @@ class ElemelekSample(SelfLogging):
             values.append(instruction.get_feature(feature_name).value)
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
-        category_counts = s.value_counts(normalize=True)
-        weights = 1 / category_counts[s]
-        weights = weights / weights.sum()
-        sampled_ids = s.sample(
-            n=k, weights=pd.Series(weights.values, index=s.index)
-        ).index.values.tolist()
-
+        sampled_ids = stratified_sample(s, k).index.tolist()
         return ElemelekSample(self.elemelek, sampled_ids)

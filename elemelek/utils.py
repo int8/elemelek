@@ -4,6 +4,8 @@ from collections import Counter
 from typing import List, Dict
 
 import language_tool_python
+import numpy as np
+import pandas as pd
 
 from elemelek.model import InstructionFeature
 from elemelek.settings import LANGUAGE_TOOL_CHECK
@@ -63,3 +65,27 @@ def language_tool_scan(
             language_tool.close()
 
     return results
+
+
+def stratified_sample(series: pd.Series, total_samples: int):
+    value_counts = series.value_counts()
+    num_categories = len(value_counts)
+    samples_per_cat = total_samples // num_categories
+    samples_remaining = total_samples % num_categories
+
+    possible_sample_sizes = np.minimum(value_counts, samples_per_cat).to_dict()
+
+    for category in value_counts.index:
+        if (
+            samples_remaining > 0
+            and possible_sample_sizes[category] < value_counts[category]
+        ):
+            possible_sample_sizes[category] += 1
+            samples_remaining -= 1
+
+    sampled_data = series.groupby(series).apply(
+        lambda x: x.sample(n=possible_sample_sizes[x.name], random_state=1)
+    )
+    sampled_data.index = sampled_data.index.droplevel(0)
+
+    return sampled_data
