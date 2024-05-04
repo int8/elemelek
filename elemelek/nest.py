@@ -128,18 +128,18 @@ class Elemelek(SelfLogging):
     def to_pandas(self):
         return pd.DataFrame([elem.to_flat_dict() for elem in self.db])
 
-    def get_sampler(self, randomize: bool = False):
-        return ElemelekSampler(self, self.db.ids, randomize=randomize)
+    def as_sample(self, randomize: bool = False):
+        return ElemelekSample(self, self.db.ids, randomize=randomize)
 
 
-class ElemelekSampler(SelfLogging):
+class ElemelekSample(SelfLogging):
     def __init__(self, elemelek: Elemelek, ids: List[int], randomize: bool = False):
         self.elemelek = elemelek
         if randomize:
             random.shuffle(ids)
         self.ids = ids
 
-    def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSampler":
+    def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSample":
         filtered_ids = list()
         for instruction in tqdm(
             self.elemelek.db[self.ids],
@@ -148,11 +148,11 @@ class ElemelekSampler(SelfLogging):
         ):
             if f(instruction):
                 filtered_ids.append(instruction.id)
-        return ElemelekSampler(self.elemelek, filtered_ids)
+        return ElemelekSample(self.elemelek, filtered_ids)
 
     def get_diverse_subset(
         self, k: int, method: SubsetChoiceMethod, **kwargs
-    ) -> "ElemelekSampler":
+    ) -> "ElemelekSample":
         if len(self.ids) <= k:
             self.info(f"Your current subset has less than {k} elements")
             return self
@@ -182,11 +182,9 @@ class ElemelekSampler(SelfLogging):
                     target_similarity_median=target_median,
                 )
 
-        return ElemelekSampler(self.elemelek, return_ids)
+        return ElemelekSample(self.elemelek, return_ids)
 
-    def sample_uniform_categorical(
-        self, feature_name: str, k: int
-    ) -> "ElemelekSampler":
+    def sample_uniform_categorical(self, feature_name: str, k: int) -> "ElemelekSample":
         if len(self.ids) <= k:
             self.info(f"Your current subset has less than {k} elements")
             return self
@@ -207,4 +205,4 @@ class ElemelekSampler(SelfLogging):
             n=k, weights=pd.Series(weights.values, index=s.index)
         ).index.values.tolist()
 
-        return ElemelekSampler(self.elemelek, sampled_ids)
+        return ElemelekSample(self.elemelek, sampled_ids)

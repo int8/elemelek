@@ -48,9 +48,8 @@ class InstructionsCluster:
         k: int,
         target_similarity_median: float,
     ) -> "InstructionsCluster":
-        similarity_matrix = index.index.pairwise_distance(
-            self.elements_ids, self.elements_ids
-        )
+        similarity_matrix = index.index.pairwise_distance(self.elements_ids)
+
         ga = OptimalSubsetGeneticAlgorithm(
             similarity_matrix,
             target_similarity_median,

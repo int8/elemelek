@@ -118,27 +118,18 @@ class InstructionsDB(SelfLogging, Sequence):
 
         if isinstance(idx, slice) or isinstance(idx, list):
             if isinstance(idx, slice):
-                indices = str(tuple(range(0, len(self)))[idx])
+                indices = list(range(0, len(self)))[idx]
             else:
-                indices = str(tuple(idx))
-            res = cur.execute(
-                f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" in {indices}'
-            )
-            rows = res.fetchall()
-            for row in rows:
-                id_, instruction, input_, output = row
-                yield Instruction(
-                    id=id_,
-                    instruction=instruction,
-                    input=input_,
-                    output=output,
-                    features=self.features.get_features(instruction_id=id_),
-                )
+                indices = idx
+
+            instructions = []
+            for i in indices:
+                instructions.append(self[i])
+            return instructions
         elif isinstance(idx, int):
             res = cur.execute(
                 f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" = {idx}'
             )
-
             row = res.fetchone()
             if row:
                 id_, instruction, input_, output = row
