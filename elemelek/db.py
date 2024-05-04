@@ -120,7 +120,7 @@ class InstructionsDB(SelfLogging, Sequence):
             if isinstance(idx, slice):
                 indices = str(tuple(range(0, len(self)))[idx])
             else:
-                indices = idx
+                indices = str(tuple(idx))
             res = cur.execute(
                 f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" in {indices}'
             )
