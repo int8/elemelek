@@ -51,7 +51,7 @@ class InstructionsCluster:
                 if i > j:
                     continue
                 similarity_matrix[i, j] = index.index.pairwise_distance(idx_i, idx_j)
-                similarity_matrix[j, i] = similarity_matrix[idx_i, idx_j]
+                similarity_matrix[j, i] = similarity_matrix[i, j]
         return similarity_matrix
 
     def get_semantically_similar_sample(
