@@ -65,7 +65,7 @@ class CustomExtractorDefinition:
     f: Callable[[Instruction], InstructionFeature]
 
 
-class SubsetChoiceMethod(enum):
+class SubsetChoiceMethod(enum.Enum):
     RANDOM = "RANDOM"
     TARGET_MEDIAN_SIMILARITY = "TARGET_MEDIAN_SIMILARITY"
 
