@@ -70,8 +70,10 @@ class InstructionsCluster:
             mutation_rate=0.1,
         )
         solution = ga.optimize()
+        optimal_elements_ids = [self.elements_ids[i] for i, v in solution if v == 1]
         return InstructionsCluster(
-            centroid_id=self.centroid_id, elements_ids=solution + [self.centroid_id]
+            centroid_id=self.centroid_id,
+            elements_ids=list(set(optimal_elements_ids + [self.centroid_id])),
         )
 
     def __len__(self):
