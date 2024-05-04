@@ -212,8 +212,12 @@ class ElemelekSampler(SelfLogging):
             values.append(instruction.get_feature(feature_name))
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
+        self.info("pd Series created")
         category_counts = s.value_counts(normalize=True)
+        self.info("category counts computed")
         weights = 1 / category_counts[s]
         weights = weights / weights.sum()
+        self.info("weights computed")
         sampled_ids = s.sample(n=k, weights=weights).index.values.tolist()
+        self.info("samples fetched ")
         return ElemelekSampler(self.elemelek, sampled_ids)
