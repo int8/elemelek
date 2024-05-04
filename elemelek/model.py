@@ -58,6 +58,13 @@ class Instruction:
             for feature in self.features or dict()
         }
 
+    @cached_property
+    def _features_dict(self):
+        return {f.name: f for f in self.features}
+
+    def get_feature(self, name):
+        return self._features_dict[name]
+
 
 @dataclasses.dataclass
 class CustomExtractorDefinition:
