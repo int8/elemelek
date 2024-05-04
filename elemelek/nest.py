@@ -156,7 +156,7 @@ class ElemelekSampler(SelfLogging):
         if len(self.ids) <= k:
             self.info(f"Your current subset has less than {k} elements")
             return self
-
+        self.info("X")
         return_ids = []
         clustering = [
             cluster.keep(set(self.ids)) for cluster in self.elemelek.clustering
