@@ -186,7 +186,7 @@ class ElemelekSampler(SelfLogging):
         values = []
         indices = []
         for instruction in self.elemelek.db[self.ids]:
-            values.append(instruction[feature_name])
+            values.append(instruction.get_feature(feature_name))
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
         data_binned, bins = pd.cut(s, bins=bins, labels=False, retbins=True)
@@ -205,7 +205,7 @@ class ElemelekSampler(SelfLogging):
         values = []
         indices = []
         for instruction in self.elemelek.db[self.ids]:
-            values.append(instruction[feature_name])
+            values.append(instruction.get_feature(feature_name))
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
         category_counts = s.value_counts(normalize=True)
