@@ -42,7 +42,7 @@ class InstructionsCluster:
     def random_sample(self, n: int):
         return random.sample(self.elements_ids, n)
 
-    def get_similarity_matrix(self, index):
+    def get_similarity_matrix(self, index: "InstructionsSemanticIndex"):
         similarity_matrix = np.zeros(
             shape=(len(self.elements_ids), len(self.elements_ids))
         )
@@ -50,10 +50,8 @@ class InstructionsCluster:
             for j, idx_j in enumerate(self.elements_ids):
                 if i > j:
                     continue
-                similarity_matrix[idx_i, idx_j] = index.index.pairwise_distance(
-                    idx_i, idx_j
-                )
-                similarity_matrix[idx_j, idx_i] = similarity_matrix[idx_i, idx_j]
+                similarity_matrix[i, j] = index.index.pairwise_distance(idx_i, idx_j)
+                similarity_matrix[j, i] = similarity_matrix[idx_i, idx_j]
         return similarity_matrix
 
     def get_semantically_similar_sample(
