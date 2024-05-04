@@ -124,20 +124,16 @@ class InstructionsDB(SelfLogging, Sequence):
             res = cur.execute(
                 f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" in {indices}'
             )
-            instructions = []
             rows = res.fetchall()
             for row in rows:
                 id_, instruction, input_, output = row
-                instructions.append(
-                    Instruction(
-                        id=id_,
-                        instruction=instruction,
-                        input=input_,
-                        output=output,
-                        features=self.features.get_features(instruction_id=id_),
-                    )
+                yield Instruction(
+                    id=id_,
+                    instruction=instruction,
+                    input=input_,
+                    output=output,
+                    features=self.features.get_features(instruction_id=id_),
                 )
-            return instructions
         elif isinstance(idx, int):
             res = cur.execute(
                 f'SELECT "index", instruction, input, output FROM {self.dataset_table_name} WHERE "index" = {idx}'
