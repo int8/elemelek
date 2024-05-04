@@ -161,10 +161,10 @@ class ElemelekSampler(SelfLogging):
         clustering = [
             cluster.keep(set(self.ids)) for cluster in self.elemelek.clustering
         ]
-        print(clustering)
+        self.info(clustering)
         clustering = [c for c in clustering if len(c) > 0]
         samples_per_cluster = InstructionsCluster.get_samples_per_cluster(clustering, k)
-        print(samples_per_cluster)
+        self.info(samples_per_cluster)
         if method == SubsetChoiceMethod.RANDOM:
             for i, c in tqdm(enumerate(clustering)):
                 return_ids += c.random_sample(samples_per_cluster[i])
