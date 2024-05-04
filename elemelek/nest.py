@@ -6,6 +6,7 @@ from typing import List, Callable
 import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder
+from tqdm import tqdm
 
 from elemelek.db import InstructionsDB
 from elemelek.features import (
@@ -140,7 +141,9 @@ class ElemelekSampler(SelfLogging):
 
     def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSampler":
         filtered_ids = list()
-        for instruction in self.elemelek.db[self.ids]:
+        for instruction in tqdm(
+            self.elemelek.db[self.ids], desc="Filtering dataset..."
+        ):
             if f(instruction):
                 filtered_ids.append(instruction.id)
         return ElemelekSampler(self.elemelek, filtered_ids)
