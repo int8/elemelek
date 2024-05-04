@@ -13,7 +13,7 @@ from sentence_transformers import SentenceTransformer
 
 from usearch.index import Index
 
-from elemelek.genetic import GeneticAlgorithm
+from elemelek.genetic import OptimalSubsetGeneticAlgorithm
 from elemelek.logging import SelfLogging
 from elemelek.model import (
     EmbeddingComputationStrategy,
@@ -51,12 +51,12 @@ class InstructionsCluster:
         similarity_matrix = index.index.pairwise_distance(
             self.elements_ids, self.elements_ids
         )
-        ga = GeneticAlgorithm(
+        ga = OptimalSubsetGeneticAlgorithm(
             similarity_matrix,
             target_similarity_median,
             population_size=100,
-            k=k - 1,
-            max_gen=50,
+            sample_size=k - 1,
+            generations=25,
             mutation_rate=0.1,
         )
         solution = ga.optimize()
