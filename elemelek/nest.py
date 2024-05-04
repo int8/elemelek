@@ -142,7 +142,9 @@ class ElemelekSampler(SelfLogging):
     def filter(self, f: Callable[[Instruction], bool]) -> "ElemelekSampler":
         filtered_ids = list()
         for instruction in tqdm(
-            self.elemelek.db[self.ids], desc="Filtering dataset..."
+            self.elemelek.db[self.ids],
+            desc="Filtering dataset...",
+            total=len(self.ids),
         ):
             if f(instruction):
                 filtered_ids.append(instruction.id)
@@ -186,9 +188,11 @@ class ElemelekSampler(SelfLogging):
         values = []
         indices = []
         for instruction in tqdm(
-            self.elemelek.db[self.ids], desc=f"retrieving values of {feature_name}"
+            self.elemelek.db[self.ids],
+            desc=f"retrieving values of {feature_name}",
+            total=len(self.ids),
         ):
-            values.append(instruction.get_feature(feature_name))
+            values.append(instruction.get_feature(feature_name).value)
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
         data_binned, bins = pd.cut(s, bins=bins, labels=False, retbins=True)
@@ -207,9 +211,11 @@ class ElemelekSampler(SelfLogging):
         values = []
         indices = []
         for instruction in tqdm(
-            self.elemelek.db[self.ids], desc=f"retrieving values of {feature_name}"
+            self.elemelek.db[self.ids],
+            desc=f"retrieving values of {feature_name}",
+            total=len(self.ids),
         ):
-            values.append(instruction.get_feature(feature_name))
+            values.append(instruction.get_feature(feature_name).value)
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
         self.info("pd Series created")
