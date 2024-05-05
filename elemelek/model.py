@@ -74,7 +74,7 @@ class CustomExtractorDefinition:
 
 class SubsetChoiceMethod(enum.Enum):
     RANDOM = "RANDOM"
-    TARGET_MEDIAN_SIMILARITY = "TARGET_MEDIAN_SIMILARITY"
+    TARGET_MEDIAN_DISTANCE = "TARGET_MEDIAN_DISTANCE"
 
 
 class EmbeddingComputationStrategy(enum.Enum):

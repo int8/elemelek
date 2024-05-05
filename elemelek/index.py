@@ -39,46 +39,65 @@ class InstructionsCluster:
             elements_ids=[e for e in self.elements_ids if e in ids],
         )
 
-    def random_sample(self, n: int):
+    def random_sample(self, n: int) -> List[int]:
         return random.sample(self.elements_ids, n)
 
-    def get_similarity_matrix(self, index: "InstructionsSemanticIndex"):
-        similarity_matrix = np.zeros(
+    def get_distance_matrix(self, index: "InstructionsSemanticIndex"):
+        distance_matrix = np.zeros(
             shape=(len(self.elements_ids), len(self.elements_ids))
         )
+        indices_left = []
+        indices_right = []
+        left = []
+        right = []
         for i, idx_i in enumerate(self.elements_ids):
             for j, idx_j in enumerate(self.elements_ids):
                 if i > j:
                     continue
-                similarity_matrix[i, j] = 1.0 - index.index.pairwise_distance(
-                    idx_i, idx_j
-                )
-                similarity_matrix[j, i] = similarity_matrix[i, j]
-        return similarity_matrix
+                indices_left.append(i)
+                indices_right.append(j)
+                left.append(idx_i)
+                right.append(idx_j)
+
+        distance_matrix[indices_left, indices_right] = index.index.pairwise_distance(
+            left, right
+        )
+        distance_matrix += distance_matrix.T
+        np.fill_diagonal(distance_matrix, 0)
+        return distance_matrix
 
     def get_semantically_similar_sample(
         self,
         index: "InstructionsSemanticIndex",
         k: int,
-        target_similarity_median: float,
-    ) -> "InstructionsCluster":
-        similarity_matrix = self.get_similarity_matrix(index)
-        ga = OptimalSubsetGeneticAlgorithm(
-            similarity_matrix,
-            target_similarity_median,
-            population_size=100,
-            sample_size=k - 1,
-            generations=25,
-            mutation_rate=0.1,
-        )
-        solution = ga.optimize()
-        optimal_elements_ids = [
-            self.elements_ids[i] for i, v in enumerate(solution) if v == 1
-        ]
-        return InstructionsCluster(
-            centroid_id=self.centroid_id,
-            elements_ids=list(set(optimal_elements_ids + [self.centroid_id])),
-        )
+        target_distance_median: float,
+    ) -> List[int]:
+        if 0 > k > len(self):
+            raise ValueError(
+                f"Cannot sample {k} elements from cluster of size {len(self)}"
+            )
+        if k == 1:
+            return [random.choice(self.elements_ids)]
+        elif k == len(self):
+            return self.elements_ids
+        else:
+            distance_matrix = self.get_distance_matrix(index)
+            ga = OptimalSubsetGeneticAlgorithm(
+                distance_matrix,
+                target_distance_median,
+                population_size=100,
+                sample_size=k,
+                generations=25,
+                mutation_rate=0.1,
+            )
+            solution = ga.optimize()
+
+            optimal_elements_ids = [
+                self.elements_ids[i] for i, _ in enumerate(solution)
+            ]
+
+            assert len(optimal_elements_ids) == k
+            return optimal_elements_ids
 
     def __len__(self):
         return len(self.elements_ids)

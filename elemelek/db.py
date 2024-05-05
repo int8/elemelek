@@ -111,7 +111,7 @@ class InstructionsDB(SelfLogging, Sequence):
         return count[0]
 
     def __iter__(self):
-        return self.__yield_rows()
+        return self.__yield_all_rows()
 
     def __getitem__(self, idx: int | slice | list) -> Instruction | List[Instruction]:
         cur = self.conn.cursor()
@@ -144,7 +144,7 @@ class InstructionsDB(SelfLogging, Sequence):
     def insert_features(self, features: List[InstructionFeature]):
         self.features.add(features)
 
-    def __yield_rows(self) -> Instruction:
+    def __yield_all_rows(self) -> Instruction:
         cursor = self.conn.cursor()
         cursor.execute(
             f'SELECT "index", instruction, input, output FROM {self.dataset_table_name}'
@@ -162,6 +162,10 @@ class InstructionsDB(SelfLogging, Sequence):
                     features=self.features.get_features(instruction_id=id_),
                 )
         cursor.close()
+
+    def yield_subset(self, ids: List[int]):
+        for id_ in ids:
+            yield self[id_]
 
     @property
     def ids(self) -> List[int]:
