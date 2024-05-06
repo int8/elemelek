@@ -54,7 +54,11 @@ sample = elemelek.as_sample(shuffle=True)
 
 # filter 
 sample = sample.filter(lambda x : x.get_feature(RERANKER_RELEVANCE_SCORE).value > 0.9)
-sample = sample.sample_diverse(100000, method = SubsetChoiceMethod.TARGET_MEDIAN_DISTANCE, target_median=0.1)
+sample = sample.sample_diverse(
+    k=100000, 
+    method = SubsetChoiceMethod.TARGET_MEDIAN_DISTANCE, 
+    target_median=0.1
+)
 sample = sample.stratify("source_name", 20000)
 
 df = sample.to_pandas()
