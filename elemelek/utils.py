@@ -1,11 +1,10 @@
 import hashlib
+import math
 
 from collections import Counter
-from typing import List, Dict
+from typing import List, Dict, Sequence
 
 import language_tool_python
-import numpy as np
-import pandas as pd
 
 from elemelek.model import InstructionFeature
 from elemelek.settings import LANGUAGE_TOOL_CHECK
@@ -67,25 +66,22 @@ def language_tool_scan(
     return results
 
 
-def stratified_sample(series: pd.Series, total_samples: int):
-    value_counts = series.value_counts()
-    num_categories = len(value_counts)
-    samples_per_cat = total_samples // num_categories
-    samples_remaining = total_samples % num_categories
+def get_samples_per_group(groups: List[Sequence], k: int) -> List[int]:
+    num_groups = len(groups)
+    ideal_samples_per_group = math.floor(k / num_groups)
 
-    possible_sample_sizes = np.minimum(value_counts, samples_per_cat).to_dict()
+    num_per_group = [min(len(g), ideal_samples_per_group) for g in groups]
 
-    for category in value_counts.index:
-        if (
-            samples_remaining > 0
-            and possible_sample_sizes[category] < value_counts[category]
-        ):
-            possible_sample_sizes[category] += 1
-            samples_remaining -= 1
+    total_samples_from_uniform = sum(num_per_group)
 
-    sampled_data = series.groupby(series).apply(
-        lambda x: x.sample(n=possible_sample_sizes[x.name], random_state=1)
-    )
-    sampled_data.index = sampled_data.index.droplevel(0)
+    remaining_samples = k - total_samples_from_uniform
 
-    return sampled_data
+    while remaining_samples > 0:
+        for i, group in enumerate(groups):
+            if num_per_group[i] < len(group) and remaining_samples > 0:
+                num_per_group[i] += 1
+                remaining_samples -= 1
+            if remaining_samples <= 0:
+                break
+
+    return num_per_group

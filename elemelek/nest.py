@@ -6,6 +6,7 @@ from typing import List, Callable, Optional
 import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from elemelek.db import InstructionsDB
@@ -18,18 +19,25 @@ from elemelek.index import InstructionsSemanticIndex, InstructionsCluster
 from elemelek.logging import SelfLogging
 from elemelek.model import Instruction, SubsetChoiceMethod
 from elemelek.settings import ELEMELEK_ARTIFACTS_PATH, Egg
-from elemelek.utils import calculate_file_md5, stratified_sample
+from elemelek.utils import calculate_file_md5, get_samples_per_group
 
 
 class Elemelek(SelfLogging):
-    def __init__(self, dataset_id: str, config: Egg):
-        self.__dataset_id = dataset_id
+    def __init__(self, config: Egg):
+        self.config = config
+        self.__dataset_id = calculate_file_md5(config.dataset_jsonl_path)
         os.makedirs(self.dataset_artifacts_path, exist_ok=True)
 
         self.db = InstructionsDB(self.dataset_artifacts_path)
         self.index = InstructionsSemanticIndex(self.index_dir_path)
-        self.config = config
         self._clustering = None
+        if not os.path.exists(self.config_path):
+            shutil.copy(config.path, self.config_path)
+            self._build()
+
+    @property
+    def config_path(self):
+        return os.path.join(ELEMELEK_ARTIFACTS_PATH, self.__dataset_id, "config.yaml")
 
     @property
     def dataset_artifacts_path(self):
@@ -45,50 +53,57 @@ class Elemelek(SelfLogging):
 
     @staticmethod
     def list_datasets():
-        return os.listdir(ELEMELEK_ARTIFACTS_PATH)
+        datasets = dict()
+        for dataset_id in os.listdir(ELEMELEK_ARTIFACTS_PATH):
+            config = Egg.from_yaml(
+                os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id, "config.yaml")
+            )
+            datasets[dataset_id] = config
+        return datasets
 
     @staticmethod
     def remove_dataset(dataset_id: str):
         if os.path.exists(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id)):
             shutil.rmtree(os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id))
 
-    @classmethod
-    def hatch(cls, config: Egg):
-        dataset_id = calculate_file_md5(config.dataset_jsonl_path)
+    def _build(self):
         try:
-            if dataset_id in Elemelek.list_datasets():
-                return cls(dataset_id, config=config)
-
-            elemelek = cls(dataset_id, config=config)
-            elemelek.db.load_jsonl(config.dataset_jsonl_path)
-            elemelek.index.build(
-                elemelek.db,
-                model_name=config.semantic_index.embeddings_model_name,
-                batch_size=config.semantic_index.embeddings_computation_batch_size,
-                dtype=config.semantic_index.dtype,
-                metric=config.semantic_index.metric,
-                connectivity=config.semantic_index.connectivity,
-                expansion_add=config.semantic_index.expansion_add,
-                expansion_search=config.semantic_index.expansion_search,
+            self.db.load_jsonl(self.config.dataset_jsonl_path)
+            self.index.build(
+                self.db,
+                model_name=self.config.semantic_index.embeddings_model_name,
+                batch_size=self.config.semantic_index.embeddings_computation_batch_size,
+                dtype=self.config.semantic_index.dtype,
+                metric=self.config.semantic_index.metric,
+                connectivity=self.config.semantic_index.connectivity,
+                expansion_add=self.config.semantic_index.expansion_add,
+                expansion_search=self.config.semantic_index.expansion_search,
             )
 
-            elemelek.index.cluster(k=config.semantic_index.n_clusters)
-            if config.features.basic:
-                elemelek.extract_basic_features()
-            if config.features.reranker:
-                elemelek.extract_rerank_relevancy(
-                    reranker_model_name=config.features.reranker.model_name,
-                    reranker_batch_size=config.features.reranker.batch_size,
+            self.index.cluster(k=self.config.semantic_index.n_clusters)
+            if self.config.features.basic:
+                self.extract_basic_features()
+            if self.config.features.reranker:
+                self.extract_rerank_relevancy(
+                    reranker_model_name=self.config.features.reranker.model_name,
+                    reranker_batch_size=self.config.features.reranker.batch_size,
                 )
-            if config.features.language_tool:
-                elemelek.extract_lang_mistakes(
-                    lang=config.features.language_tool.lang,
-                    nr_of_threads=config.features.language_tool.nr_of_threads,
+            if self.config.features.language_tool:
+                self.extract_lang_mistakes(
+                    lang=self.config.features.language_tool.lang,
+                    nr_of_threads=self.config.features.language_tool.nr_of_threads,
                 )
-            return elemelek
         except Exception as e:
-            Elemelek.remove_dataset(dataset_id)
+            Elemelek.remove_dataset(self.__dataset_id)
             raise e
+
+    @classmethod
+    def from_dataset_id(cls, dataset_id: str):
+        if dataset_id in Elemelek.list_datasets():
+            config = Egg.from_yaml(
+                os.path.join(ELEMELEK_ARTIFACTS_PATH, dataset_id, "config.yaml")
+            )
+            return cls(config)
 
     def extract_basic_features(self):
         extractor = BasicFeaturesExtractor()
@@ -174,7 +189,7 @@ class ElemelekSample(SelfLogging):
         ]
         clustering = [c for c in clustering if len(c) > 0]
 
-        samples_per_cluster = InstructionsCluster.get_samples_per_cluster(clustering, k)
+        samples_per_cluster = get_samples_per_group(clustering, k)
 
         if method == SubsetChoiceMethod.RANDOM:
             for i, c in tqdm(enumerate(clustering)):
@@ -206,7 +221,7 @@ class ElemelekSample(SelfLogging):
 
         return ElemelekSample(self.elemelek, return_ids)
 
-    def sample_uniform_categorical(self, feature_name: str, k: int) -> "ElemelekSample":
+    def stratify(self, feature_name: str, k: int) -> "ElemelekSample":
         if len(self.ids) <= k:
             self.info(f"Your current subset has less than {k} elements")
             return self
@@ -220,8 +235,13 @@ class ElemelekSample(SelfLogging):
             values.append(instruction.get_feature(feature_name).value)
             indices.append(instruction.id)
         s = pd.Series(values, index=indices)
-        sampled_ids = stratified_sample(s, k).index.tolist()
-        return ElemelekSample(self.elemelek, sampled_ids)
+        groups = [g[1].index.tolist() for g in s.groupby(s)]
+        samples_per_group = get_samples_per_group(groups, k)
+        sample_ids = []
+        for i, sample_size in enumerate(samples_per_group):
+            sample_ids += random.sample(groups[i], sample_size)
+
+        return ElemelekSample(self.elemelek, sample_ids)
 
     def sample_random(self, k: int) -> "ElemelekSample":
         return ElemelekSample(elemelek=self.elemelek, ids=random.sample(self.ids, k=k))

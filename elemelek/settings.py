@@ -77,6 +77,7 @@ class FeaturesConfig:
 
 @dataclasses.dataclass
 class Egg:
+    path: str
     dataset_jsonl_path: str
     db: DBConfig
     semantic_index: SemanticIndexConfig
@@ -87,6 +88,7 @@ class Egg:
         with open(path, "r") as file:
             config_data = yaml.safe_load(file)
         return cls(
+            path=path,
             dataset_jsonl_path=config_data["dataset_jsonl_path"],
             db=DBConfig(**config_data["db"]),
             semantic_index=SemanticIndexConfig(**config_data["semantic_index"]),

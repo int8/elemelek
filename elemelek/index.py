@@ -1,12 +1,11 @@
 import dataclasses
 import json
-import math
 import os
 import random
 import shutil
+
 from functools import cached_property
 from typing import List, Sequence, Set
-
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -26,7 +25,7 @@ from tqdm import tqdm
 
 
 @dataclasses.dataclass
-class InstructionsCluster:
+class InstructionsCluster(Sequence):
     centroid_id: int
     elements_ids: List[int]
 
@@ -102,30 +101,8 @@ class InstructionsCluster:
     def __len__(self):
         return len(self.elements_ids)
 
-    @staticmethod
-    def get_samples_per_cluster(
-        clustering: List["InstructionsCluster"], k: int
-    ) -> List[int]:
-        num_clusters = len(clustering)
-        ideal_samples_per_cluster = math.floor(k / num_clusters)
-
-        num_per_cluster = [
-            min(len(cluster), ideal_samples_per_cluster) for cluster in clustering
-        ]
-
-        total_samples_from_uniform = sum(num_per_cluster)
-
-        remaining_samples = k - total_samples_from_uniform
-
-        while remaining_samples > 0:
-            for i, cluster in enumerate(clustering):
-                if num_per_cluster[i] < len(cluster) and remaining_samples > 0:
-                    num_per_cluster[i] += 1
-                    remaining_samples -= 1
-                if remaining_samples <= 0:
-                    break
-
-        return num_per_cluster
+    def __getitem__(self, index: int) -> int:
+        return self.elements_ids[index]
 
 
 class InstructionsSemanticIndex(SelfLogging):
