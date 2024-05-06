@@ -142,8 +142,8 @@ class Elemelek(SelfLogging):
             )
         return pd.DataFrame([elem.to_flat_dict() for elem in self.db])
 
-    def as_sample(self, randomize: bool = False):
-        return ElemelekSample(self, self.db.ids, shuffle=randomize)
+    def as_sample(self, shuffle: bool = False):
+        return ElemelekSample(self, self.db.ids, shuffle=shuffle)
 
 
 class ElemelekSample(SelfLogging):

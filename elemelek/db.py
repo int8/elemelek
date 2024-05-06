@@ -17,6 +17,7 @@ from collections.abc import Sequence
 class InMemoryFeatures(SelfLogging):
     def __init__(self, features_json_path: str):
         self.features_json_path = features_json_path
+
         if os.path.exists(self.features_json_path):
             with open(self.features_json_path, "r") as f:
                 self._data = json.load(f)
@@ -50,6 +51,9 @@ class InMemoryFeatures(SelfLogging):
             InstructionFeature(instruction_id=instruction_id, name=name, value=value)
             for name, value in self._data.get(instruction_id, dict()).items()
         ]
+
+    def get_feature_names(self):
+        pass
 
 
 class InstructionsDB(SelfLogging, Sequence):
@@ -141,6 +145,9 @@ class InstructionsDB(SelfLogging, Sequence):
                     features=self.features.get_features(instruction_id=idx),
                 )
 
+    def list_features(self):
+        self.features.get_features()
+
     def insert_features(self, features: List[InstructionFeature]):
         self.features.add(features)
 
@@ -151,7 +158,6 @@ class InstructionsDB(SelfLogging, Sequence):
         )
         row = cursor.fetchone()
         while row:
-            row = cursor.fetchone()
             if row:
                 id_, instruction, input_, output = row
                 yield Instruction(
@@ -161,6 +167,7 @@ class InstructionsDB(SelfLogging, Sequence):
                     output=output,
                     features=self.features.get_features(instruction_id=id_),
                 )
+            row = cursor.fetchone()
         cursor.close()
 
     def yield_subset(self, ids: List[int]):
