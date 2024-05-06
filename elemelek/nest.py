@@ -6,7 +6,6 @@ from typing import List, Callable, Optional
 import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from elemelek.db import InstructionsDB
