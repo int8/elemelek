@@ -1,8 +1,10 @@
 import os
 import random
 import shutil
+from functools import cached_property
 from typing import List, Callable, Optional
 
+import jsonlines
 import pandas as pd
 import torch
 from sentence_transformers import CrossEncoder
@@ -49,6 +51,10 @@ class Elemelek(SelfLogging):
     @property
     def clustering(self) -> list[InstructionsCluster]:
         return self.index.cluster(k=self.config.semantic_index.n_clusters)
+
+    @cached_property
+    def feature_names(self) -> List[str]:
+        return self.db.list_feature_names()
 
     @staticmethod
     def list_datasets():
@@ -135,15 +141,34 @@ class Elemelek(SelfLogging):
         instruction_ids = self.index.search(query, k)
         return [self.db[int(idx)] for idx in instruction_ids]
 
-    def to_pandas(self, indices: Optional[List[int]] = None):
+    def to_pandas(
+        self, indices: Optional[List[int]] = None, include_features: bool = True
+    ):
         if indices:
             return pd.DataFrame(
-                [elem.to_flat_dict() for elem in self.db.yield_subset(indices)]
+                [
+                    elem.to_dict(include_features=include_features)
+                    for elem in self.db.yield_subset(indices)
+                ]
             )
         return pd.DataFrame([elem.to_flat_dict() for elem in self.db])
 
-    def as_sample(self, shuffle: bool = False):
+    def start_sampling(self, shuffle: bool = False):
         return ElemelekSample(self, self.db.ids, shuffle=shuffle)
+
+    def to_jsonl(
+        self,
+        output_file_path: str,
+        indices: Optional[List[int]] = None,
+        include_features: bool = False,
+    ):
+        with jsonlines.open(output_file_path, "w") as jsonl_f:
+            if indices:
+                for elem in self.db.yield_subset(indices):
+                    jsonl_f.write(elem.to_dict(include_features=include_features))
+            else:
+                for elem in self.db:
+                    jsonl_f.write(elem.to_dict(include_features=include_features))
 
 
 class ElemelekSample(SelfLogging):
@@ -253,5 +278,12 @@ class ElemelekSample(SelfLogging):
             elemelek=self.elemelek, ids=list(set(self.ids) | set(other.ids))
         )
 
-    def to_pandas(self):
-        self.elemelek.to_pandas(self.ids)
+    def to_pandas(self, include_features: bool = True):
+        self.elemelek.to_pandas(self.ids, include_features=include_features)
+
+    def to_jsonl(self, output_file_path: str, include_features: bool = False):
+        self.elemelek.to_jsonl(
+            output_file_path=output_file_path,
+            indices=self.ids,
+            include_features=include_features,
+        )

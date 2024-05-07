@@ -17,11 +17,14 @@ from collections.abc import Sequence
 class InMemoryFeatures(SelfLogging):
     def __init__(self, features_json_path: str):
         self.features_json_path = features_json_path
-
+        self._feature_names = set()
+        self._data = {}
         if os.path.exists(self.features_json_path):
             with open(self.features_json_path, "r") as f:
-                self._data = json.load(f)
-                self._data = {int(k): v for k, v in self._data.items()}
+                _data = json.load(f)
+                for k, v in _data.items():
+                    self._data[int(k)] = v
+                    self._feature_names |= set(v.keys())
 
         else:
             self._data: Dict[int, Dict[str, InstructionFeature]] = dict()
@@ -31,6 +34,7 @@ class InMemoryFeatures(SelfLogging):
             self._data[feature.instruction_id] = self._data.get(
                 feature.instruction_id, dict()
             ) | {feature.name: feature.value}
+            self._feature_names |= {f.name for f in features}
 
         if save:
             self.save()
@@ -52,8 +56,8 @@ class InMemoryFeatures(SelfLogging):
             for name, value in self._data.get(instruction_id, dict()).items()
         ]
 
-    def get_feature_names(self):
-        pass
+    def list_feature_names(self) -> List[str]:
+        return list(self._feature_names)
 
 
 class InstructionsDB(SelfLogging, Sequence):
@@ -145,8 +149,8 @@ class InstructionsDB(SelfLogging, Sequence):
                     features=self.features.get_features(instruction_id=idx),
                 )
 
-    def list_features(self):
-        self.features.get_features()
+    def list_feature_names(self) -> List[str]:
+        return self.features.list_feature_names()
 
     def insert_features(self, features: List[InstructionFeature]):
         self.features.add(features)

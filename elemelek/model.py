@@ -47,16 +47,20 @@ class Instruction:
     def is_question(self) -> bool:
         return self.instruction.strip().endswith("?")
 
-    def to_flat_dict(self):
+    def to_dict(self, include_features: bool = False):
         return {
             "id": self.id,
             "instruction": self.instruction,
             "input": self.input,
             "output": self.output,
-        } | {
-            f"feature_{feature.name}": feature.value
-            for feature in self.features or dict()
-        }
+        } | (
+            {
+                f"feature_{feature.name}": feature.value
+                for feature in self.features or dict()
+            }
+            if include_features
+            else {}
+        )
 
     @cached_property
     def _features_dict(self):

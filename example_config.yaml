@@ -1,4 +1,4 @@
-dataset_jsonl_path: /path/to/instructions/file.jsonl
+dataset_jsonl_path: /home/kamil/Downloads/xxx.jsonl
 db:
   database_insert_batch_size: 100
 semantic_index:
@@ -9,7 +9,7 @@ semantic_index:
   dtype: 'f32'
   expansion_add: 128
   expansion_search: 256
-  n_clusters: 2
+  n_clusters: 10000
 features:
   basic: true
   reranker:
