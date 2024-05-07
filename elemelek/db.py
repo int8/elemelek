@@ -185,6 +185,14 @@ class InstructionsDB(SelfLogging, Sequence):
         rows = res.fetchall()
         return [row[0] for row in rows]
 
+    def unique_ids(self) -> List[int]:
+        cursor = self.conn.cursor()
+        res = cursor.execute(
+            f'SELECT "index" FROM {self.dataset_table_name} group by input, instruction, output;'
+        )
+        rows = res.fetchall()
+        return [row[0] for row in rows]
+
     def clean(self):
         cur = self.conn.cursor()
         cur.execute("DELETE from dataset;")

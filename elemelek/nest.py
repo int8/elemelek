@@ -178,8 +178,13 @@ class ElemelekSample(SelfLogging):
         if shuffle:
             self.shuffle()
 
-    def shuffle(self):
-        random.shuffle(self.ids)
+    def shuffle(self) -> "ElemelekSample":
+        return ElemelekSample(
+            elemelek=self.elemelek, ids=random.sample(self.ids, len(self.ids))
+        )
+
+    def unique(self) -> "ElemelekSample":
+        return ElemelekSample(elemelek=self.elemelek, ids=self.elemelek.db.unique_ids())
 
     def filter(
         self, f: Callable[[Instruction], bool], max_k: Optional[int] = None
@@ -219,7 +224,7 @@ class ElemelekSample(SelfLogging):
             for i, c in tqdm(enumerate(clustering)):
                 return_ids += c.random_sample(samples_per_cluster[i])
 
-        if method == SubsetChoiceMethod.TARGET_MEDIAN_DISTANCE:
+        if method == SubsetChoiceMethod.VARIABILITY_FACTOR:
             within_cluster_diversity_factor = kwargs.get(
                 "within_cluster_diversity_factor"
             )

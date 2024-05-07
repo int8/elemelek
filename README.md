@@ -7,15 +7,16 @@ pip install elemelek
 
 ### What does elemelek do ? 
 
-Elemelek designed to sample subsets of instructions gathered from various sources (and so with various quality/diversity) 
+Elemelek is designed to sample subsets of instructions gathered/generated from various sources (and so with various quality/diversity) 
 for LLM fine-tuning tasks. Under the hood elemelek does the following: 
 
-- creates sqlite database to keep instructions / features at
+- creates sqlite database to keep instructions / features in
 - computes embeddings of instructions 
-- index these embeddings in HNSW index via `usearch`
-- cluster embeddings  
+- indexes the embeddings in HNSW index via `usearch`
+- clusters the embeddings 
 - compute features of each instruction in dataset (basic text statistics + rerank score)
 
+Once created it provides simple interface to sample filtered data 
 
 ### How to use it:
 
@@ -54,26 +55,31 @@ Run
 from elemelek.nest import Elemelek, Egg
 # read config file  
 egg = Egg.from_yaml("config.yaml")
-# create your elemelek - this will take a bit 
+# create your elemelek - this will take a moment, strong GPU is required for embeddings and rerank relevance scores computation 
 elemelek = Elemelek(egg)
 ```
 
-Once your dataset is built you can start sampling 
+Once your dataset is built you can start sampling
 
 ```python
 from elemelek.settings import RERANKER_RELEVANCE_SCORE
 from elemelek.model import SubsetChoiceMethod
+
 # start sampling 
 sample = elemelek.start_sampling(shuffle=True)
 
 # filter 
-sample = sample.filter(lambda x : x.get_feature(RERANKER_RELEVANCE_SCORE).value > 0.9)
+sample = sample.filter(
+    lambda x: x.get_feature(RERANKER_RELEVANCE_SCORE).value > 0.9)
 
-# sample 10k points with distance between them to be targeted at around 0.1
+# sample 100k points with distance between them to targetted to be "as diverse as possible" 
+
 sample = sample.sample_diverse(
-    k=100000, 
-    method = SubsetChoiceMethod.TARGET_MEDIAN_DISTANCE, # for each cluster 
-    target_median=0.1
+    k=100000,
+    method=SubsetChoiceMethod.VARIABILITY_FACTOR,  
+    within_cluster_diversity_factor=1.0
+    # within_cluster_diversity_factor=0.0 => the least diverse subset
+    # within_cluster_diversity_factor=1.0 => the most diverse subset 
 )
 
 # get 20k instructions following uniform distribution of categorical feature "source_name"  
