@@ -30,11 +30,11 @@ class InMemoryFeatures(SelfLogging):
             self._data: Dict[int, Dict[str, InstructionFeature]] = dict()
 
     def add(self, features: List[InstructionFeature], save: bool = True):
+        self._feature_names |= {f.name for f in features}
         for feature in features:
             self._data[feature.instruction_id] = self._data.get(
                 feature.instruction_id, dict()
             ) | {feature.name: feature.value}
-            self._feature_names |= {f.name for f in features}
 
         if save:
             self.save()
@@ -112,17 +112,17 @@ class InstructionsDB(SelfLogging, Sequence):
                     self.dataset_table_name, self.conn, if_exists="append"
                 )
                 self.info("2")
-                # other_columns = set(chunk.columns) - MANDATORY_FIELDS
-                # other_features = []
-                # if len(other_columns) > 0:
-                #     for column in other_columns:
-                #         other_features += [
-                #             InstructionFeature(
-                #                 name=column, instruction_id=id_, value=value
-                #             )
-                #             for id_, value in chunk[column].items()
-                #         ]
-                #     self.features.add(other_features, save=True)
+                other_columns = set(chunk.columns) - MANDATORY_FIELDS
+                other_features = []
+                if len(other_columns) > 0:
+                    for column in other_columns:
+                        other_features += [
+                            InstructionFeature(
+                                name=column, instruction_id=id_, value=value
+                            )
+                            for id_, value in chunk[column].items()
+                        ]
+                    self.features.add(other_features, save=True)
 
             self.info(
                 f"Data has been saved to database "
