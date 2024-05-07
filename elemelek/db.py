@@ -112,17 +112,18 @@ class InstructionsDB(SelfLogging, Sequence):
                     self.dataset_table_name, self.conn, if_exists="append"
                 )
                 self.info("2")
-                other_columns = set(chunk.columns) - MANDATORY_FIELDS
-                if len(other_columns) > 0:
-                    for column in other_columns:
-                        other_features = [
-                            InstructionFeature(
-                                name=column, instruction_id=id_, value=value
-                            )
-                            for id_, value in chunk[column].items()
-                        ]
-                        self.features.add(other_features, save=False)
-            self.features.save()
+                # other_columns = set(chunk.columns) - MANDATORY_FIELDS
+                # other_features = []
+                # if len(other_columns) > 0:
+                #     for column in other_columns:
+                #         other_features += [
+                #             InstructionFeature(
+                #                 name=column, instruction_id=id_, value=value
+                #             )
+                #             for id_, value in chunk[column].items()
+                #         ]
+                #     self.features.add(other_features, save=True)
+
             self.info(
                 f"Data has been saved to database "
                 + f"{duplicated} duplicates filtered out"
