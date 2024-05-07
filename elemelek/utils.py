@@ -85,3 +85,9 @@ def get_samples_per_group(groups: List[Sequence], k: int) -> List[int]:
                 break
 
     return num_per_group
+
+
+def compute_df_row_md5(row):
+    str_to_hash = "".join(row)
+    result = hashlib.md5(str_to_hash.encode())
+    return result.hexdigest()

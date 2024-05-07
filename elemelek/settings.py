@@ -41,6 +41,7 @@ NON_ALPHA_NUMERIC_CHARS_RATIO = "non_alpha_numeric_chars_ratio"
 @dataclasses.dataclass
 class DBConfig:
     database_insert_batch_size: int
+    remove_duplicates: bool
 
 
 @dataclasses.dataclass

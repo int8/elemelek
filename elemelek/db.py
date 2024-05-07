@@ -10,7 +10,7 @@ from tqdm import tqdm
 from elemelek.logging import SelfLogging
 from elemelek.model import DatasetError, Instruction, InstructionFeature
 from elemelek.settings import MANDATORY_FIELDS
-from elemelek.utils import count_jsonl_objects
+from elemelek.utils import count_jsonl_objects, compute_df_row_md5
 from collections.abc import Sequence
 
 
@@ -78,10 +78,13 @@ class InstructionsDB(SelfLogging, Sequence):
     def close(self):
         self.conn.close()
 
-    def load_jsonl(self, jsonl_path: str, chunksize: int = 25000):
+    def load_jsonl(
+        self, jsonl_path: str, chunksize: int = 25000, remove_duplicates: bool = True
+    ):
         try:
+            seen_instructions = set()
             reader = pd.read_json(jsonl_path, lines=True, chunksize=chunksize)
-
+            duplicated = 0
             for chunk in tqdm(
                 reader,
                 total=count_jsonl_objects(jsonl_path) // chunksize,
@@ -92,6 +95,19 @@ class InstructionsDB(SelfLogging, Sequence):
                         f"Make sure your json entries have all the fields"
                         f": {MANDATORY_FIELDS} "
                     )
+
+                if remove_duplicates:
+                    current_chunk_hashes = chunk[list[MANDATORY_FIELDS]].apply(
+                        compute_df_row_md5, axis=1
+                    )
+                    keep_these = current_chunk_hashes.map(
+                        lambda x: x not in seen_instructions
+                    )
+                    seen_instructions |= set(current_chunk_hashes.tolist())
+
+                    duplicated += len(chunk) - keep_these.sum()
+                    chunk = chunk[keep_these]
+
                 chunk[list(MANDATORY_FIELDS)].to_sql(
                     self.dataset_table_name, self.conn, if_exists="append"
                 )
@@ -105,7 +121,12 @@ class InstructionsDB(SelfLogging, Sequence):
                             for id_, value in chunk[column].items()
                         ]
                         self.features.add(other_features)
-
+            self.info(
+                f"Data has been saved to database "
+                + f"{duplicated} duplicates filtered out"
+                if duplicated
+                else ""
+            )
         except Exception as e:
             self.error(traceback.format_exc())
             self.info(f"removing database {self.sqlite_db_path} due to error")

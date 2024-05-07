@@ -1,6 +1,7 @@
 dataset_jsonl_path: /home/kamil/Downloads/xxx.jsonl
-db:
+data:
   database_insert_batch_size: 100
+  remove_duplicates: true
 semantic_index:
   embeddings_model_name: sdadas/st-polish-paraphrase-from-distilroberta
   embeddings_computation_batch_size: 3
