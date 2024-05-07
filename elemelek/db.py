@@ -106,6 +106,7 @@ class InstructionsDB(SelfLogging, Sequence):
                     seen_instructions |= set(current_chunk_hashes.tolist())
 
                     duplicated += len(chunk) - keep_these.sum()
+                    print(duplicated)
                     chunk = chunk[keep_these]
 
                 chunk[list(MANDATORY_FIELDS)].to_sql(
@@ -120,7 +121,8 @@ class InstructionsDB(SelfLogging, Sequence):
                             )
                             for id_, value in chunk[column].items()
                         ]
-                        self.features.add(other_features)
+                        self.features.add(other_features, save=False)
+            self.features.save()
             self.info(
                 f"Data has been saved to database "
                 + f"{duplicated} duplicates filtered out"

@@ -73,7 +73,10 @@ class Elemelek(SelfLogging):
 
     def _build(self):
         try:
-            self.db.load_jsonl(self.config.dataset_jsonl_path)
+            self.db.load_jsonl(
+                self.config.dataset_jsonl_path,
+                chunksize=self.config.db.database_insert_batch_size,
+            )
             self.index.build(
                 self.db,
                 model_name=self.config.semantic_index.embeddings_model_name,
