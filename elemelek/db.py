@@ -106,12 +106,12 @@ class InstructionsDB(SelfLogging, Sequence):
                     seen_instructions |= set(current_chunk_hashes.tolist())
 
                     duplicated += len(chunk) - keep_these.sum()
-                    print(duplicated)
                     chunk = chunk[keep_these]
-
+                self.info("1")
                 chunk[list(MANDATORY_FIELDS)].to_sql(
                     self.dataset_table_name, self.conn, if_exists="append"
                 )
+                self.info("2")
                 other_columns = set(chunk.columns) - MANDATORY_FIELDS
                 if len(other_columns) > 0:
                     for column in other_columns:
