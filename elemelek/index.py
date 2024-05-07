@@ -69,7 +69,7 @@ class InstructionsCluster(Sequence):
         self,
         index: "InstructionsSemanticIndex",
         k: int,
-        target_distance_median: float,
+        within_cluster_diversity_factor: float,
     ) -> List[int]:
         if 0 > k > len(self):
             raise ValueError(
@@ -81,9 +81,14 @@ class InstructionsCluster(Sequence):
             return self.elements_ids
         else:
             distance_matrix = self.get_distance_matrix(index)
+            target_distance = np.quantile(
+                distance_matrix[np.triu(distance_matrix, k=1).nonzero()],
+                within_cluster_diversity_factor,
+            )
+
             ga = OptimalSubsetGeneticAlgorithm(
                 distance_matrix,
-                target_distance_median,
+                target_distance=target_distance,
                 population_size=100,
                 sample_size=k,
                 generations=25,

@@ -220,10 +220,12 @@ class ElemelekSample(SelfLogging):
                 return_ids += c.random_sample(samples_per_cluster[i])
 
         if method == SubsetChoiceMethod.TARGET_MEDIAN_DISTANCE:
-            target_median = kwargs.get("target_median")
-            if target_median is None:
+            within_cluster_diversity_factor = kwargs.get(
+                "within_cluster_diversity_factor"
+            )
+            if within_cluster_diversity_factor is None:
                 raise ValueError(
-                    f"Please provide float target_median "
+                    f"Please provide float within_cluster_diversity_factor "
                     f"parameter when  choosing {method}"
                 )
             for i, c in tqdm(
@@ -238,7 +240,7 @@ class ElemelekSample(SelfLogging):
                 return_ids += c.get_semantically_similar_sample(
                     index=self.elemelek.index,
                     k=samples_per_cluster[i],
-                    target_distance_median=target_median,
+                    within_cluster_diversity_factor=within_cluster_diversity_factor,
                 )
 
                 assert len(return_ids) == sum(samples_per_cluster[: (i + 1)])
