@@ -28,6 +28,7 @@ Create YAML config file:
 dataset_jsonl_path: /path/to/your/file.jsonl
 db:
   database_insert_batch_size: 1000 # chunk size dataset will be written to db with 
+  remove_duplicates: true # do not keep duplicated entries in database 
 semantic_index:
   embeddings_model_name: sentence-transformers/all-MiniLM-L6-v2 # sentence-transformer model used to compute embeddings of instructions 
   embeddings_computation_batch_size: 32 # batch-size used for embeddings computation 
