@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 
 @dataclasses.dataclass
-class InstructionsCluster(Sequence):
+class InstructionsCluster(Sequence, SelfLogging):
     centroid_id: int
     elements_ids: List[int]
 
@@ -91,14 +91,12 @@ class InstructionsCluster(Sequence):
                 target_distance=target_distance,
                 population_size=100,
                 sample_size=k,
-                generations=25,
+                generations=50,
                 mutation_rate=0.1,
             )
             solution = ga.optimize()
 
-            optimal_elements_ids = [
-                self.elements_ids[i] for i, _ in enumerate(solution)
-            ]
+            optimal_elements_ids = [self.elements_ids[i] for i in solution]
 
             assert len(optimal_elements_ids) == k
             return optimal_elements_ids
