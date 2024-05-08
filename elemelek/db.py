@@ -85,6 +85,7 @@ class InstructionsDB(SelfLogging, Sequence):
             seen_instructions = set()
             reader = pd.read_json(jsonl_path, lines=True, chunksize=chunksize)
             duplicated = 0
+            current_index = 0
             for chunk in tqdm(
                 reader,
                 total=count_jsonl_objects(jsonl_path) // chunksize,
@@ -107,6 +108,15 @@ class InstructionsDB(SelfLogging, Sequence):
 
                     duplicated += len(chunk) - keep_these.sum()
                     chunk = chunk[keep_these]
+
+                chunk.set_index(
+                    pd.RangeIndex(
+                        start=current_index,
+                        stop=current_index + len(chunk),
+                    ),
+                    inplace=True,
+                )
+                current_index += len(chunk)
 
                 chunk[list(MANDATORY_FIELDS)].to_sql(
                     self.dataset_table_name, self.conn, if_exists="append"
