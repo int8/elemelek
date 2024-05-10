@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "elemelek"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "Elemelek is designed to sample subsets of instructions gathered/generated from various sources (and so with various quality/diversity) for LLM fine-tuning tasks."
 authors = ["int8"]
 license = "MIT"
