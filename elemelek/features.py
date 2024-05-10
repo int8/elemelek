@@ -12,19 +12,22 @@ from elemelek.model import (
     InstructionFeature,
     CustomExtractorDefinition,
 )
-from elemelek.settings import (
-    RERANKER_RELEVANCE_SCORE,
-    MEDIAN_WORD_LENGTH,
-    QUANTILE_WORD_LENGTH_09,
-    QUANTILE_WORD_LENGTH_01,
-    TOTAL_LENGTH,
-    IS_QUESTION,
-    HAS_INPUT,
-    NUMERIC_CHARS_RATIO,
-    NON_ALPHA_NUMERIC_CHARS_RATIO,
-)
+
+
 from elemelek.utils import divide_dict, language_tool_scan
 import concurrent.futures
+
+
+RERANKER_RELEVANCE_SCORE = "reranker-relevance-score"
+LANGUAGE_TOOL_CHECK = "language_tool_check"
+MEDIAN_WORD_LENGTH = "median_word_length"
+QUANTILE_WORD_LENGTH_09 = "quantile_0.9_word_length"
+QUANTILE_WORD_LENGTH_01 = "quantile_0.1_word_length"
+TOTAL_LENGTH = "total_length"
+IS_QUESTION = "is_question"
+HAS_INPUT = "has_input"
+NUMERIC_CHARS_RATIO = "numeric_chars_ratio"
+NON_ALPHA_NUMERIC_CHARS_RATIO = "non_alpha_numeric_chars_ratio"
 
 
 class InstructionFeatureExtractor(ABC, SelfLogging):
