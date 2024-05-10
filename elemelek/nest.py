@@ -165,11 +165,13 @@ class Elemelek(SelfLogging):
         output_file_path: str,
         indices: Optional[List[int]] = None,
         include_features: bool = False,
-        use_chat_template_from: Optional[str] = "Facebook/blenderbot-400M-distill",
+        include_instruction_using_chat_template_from: Optional[str] = None,
     ):
         tokenizer = None
-        if use_chat_template_from:
-            tokenizer = AutoTokenizer.from_pretrained(use_chat_template_from)
+        if include_instruction_using_chat_template_from:
+            tokenizer = AutoTokenizer.from_pretrained(
+                include_instruction_using_chat_template_from
+            )
         with jsonlines.open(output_file_path, "w") as jsonl_f:
             if not indices:
                 indices = self.db.ids
@@ -309,11 +311,11 @@ class ElemelekSample(SelfLogging):
         self,
         output_file_path: str,
         include_features: bool = False,
-        use_chat_template_from: Optional[str] = "Facebook/blenderbot-400M-distill",
+        include_instruction_using_chat_template_from: Optional[str] = None,
     ):
         self.elemelek.to_jsonl(
             output_file_path=output_file_path,
             indices=self.ids,
             include_features=include_features,
-            use_chat_template_from=use_chat_template_from,
+            include_instruction_using_chat_template_from=include_instruction_using_chat_template_from,
         )
