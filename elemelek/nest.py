@@ -189,6 +189,9 @@ class Elemelek(SelfLogging):
                     elem_dict |= {"__instruction_text": __instruction_text}
                 jsonl_f.write(elem_dict)
 
+    def __getitem__(self, idx: int | slice | list) -> Instruction | List[Instruction]:
+        return self.db[idx]
+
 
 class ElemelekSample(SelfLogging):
     def __init__(self, elemelek: Elemelek, ids: List[int], shuffle: bool = False):
@@ -319,3 +322,9 @@ class ElemelekSample(SelfLogging):
             include_features=include_features,
             include_instruction_using_chat_template_from=include_instruction_using_chat_template_from,
         )
+
+    def __getitem__(
+        self, idx: int | slice | list
+    ) -> Optional[Instruction | List[Instruction]]:
+        if idx in self.ids:
+            return self.elemelek[idx]

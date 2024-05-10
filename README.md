@@ -63,34 +63,80 @@ elemelek = Elemelek(egg)
 Once your dataset is built you can start sampling
 
 ```python
-from elemelek.settings import RERANKER_RELEVANCE_SCORE
+from elemelek.settings import RERANKER_RELEVANCE_SCORE, IS_QUESTION
 from elemelek.model import SubsetChoiceMethod
 
 # start sampling 
 sample = elemelek.start_sampling(shuffle=True)
 
-# filter 
-sample = sample.filter(
-    lambda x: x.get_feature(RERANKER_RELEVANCE_SCORE).value > 0.9)
+# filter questions with relevance score > 0.9 
+substantive_questions  = sample.filter(
+    lambda x: ( 
+        x.get_feature(IS_QUESTION).value == True and 
+        x.get_feature(RERANKER_RELEVANCE_SCORE).value > 0.9
+    )
+)
 
-# sample 100k points with distance between them to targetted to be "as diverse as possible" 
-
-sample = sample.sample_diverse(
-    k=100000,
+# get subset of 25k diverse substantive questions  
+diverse_questions = substantive_questions.sample_diverse(
+    k=25000,
     method=SubsetChoiceMethod.VARIABILITY_FACTOR,  
     within_cluster_diversity_factor=1.0
     # within_cluster_diversity_factor=0.0 => the least diverse subset
     # within_cluster_diversity_factor=1.0 => the most diverse subset 
 )
 
-# get 20k instructions following uniform distribution of categorical feature "source_name"  
-sample = sample.stratify("source_name", 20000)
+# get non-questions 
+non_questions = sample.filter(
+    lambda x: x.get_feature(IS_QUESTION).value == False, 
+)
+
+# get 25k diverse non questions 
+diverse_non_questions = non_questions.sample_diverse(
+    k=25000,
+    method=SubsetChoiceMethod.VARIABILITY_FACTOR,  
+    within_cluster_diversity_factor=1.0
+)
+
+# compose final sample 
+final_sample = diverse_non_questions + diverse_questions
 
 # get DF and play with it 
-df = sample.to_pandas()
+df = final_sample.to_pandas()
 
 # dump your data to JSONL (and hopefully train your great fine-tuned LLM)
-sample.to_jsonl("my-awasome-sample.jsonl")
+# features will be included to output jsonl + you will find __instruction_text field 
+# representing formatted instruction (using apply_chat_template from tokenizer of your choice) 
+final_sample.to_jsonl(
+    "my-awasome-sample.jsonl", 
+    include_features=True, 
+    include_instruction_using_chat_template_from="mistralai/Mistral-7B-Instruct-v0.2"
+)
+```
+
+Your awesome-sample.jsonl entries will look like this: 
+
+```json
+{
+  "id": 476137,
+  "instruction": "Jakie są produkty z mleka?",
+  "input": "",
+  "output": "Do nabiału należą również produkty mleczne...",
+  "feature_source_name": "almost_like_an_alpaca",
+  "feature_category": "ALMOST_LIKE_AN_ALPACA",
+  "feature_median_word_length": 6,
+  "feature_quantile_0.9_word_length": 9.6,
+  "feature_quantile_0.1_word_length": 1.8,
+  "feature_total_length": 292,
+  "feature_is_question": true,
+  "feature_has_input": true,
+  "feature_numeric_chars_ratio": 0,
+  "feature_non_alpha_numeric_chars_ratio": 0.18835616438356165,
+  "feature_reranker-relevance-score": 0.9645681381225586,
+  "__instruction_text": "<s>[INST] Jakie są produkty z mleka? \n  [/INST]Do nabiału należą również produkty mleczne...</s> "
+}
+
+
 ```
 
 Additionally, you can 
