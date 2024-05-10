@@ -21,6 +21,7 @@ from elemelek.logging import SelfLogging
 from elemelek.model import Instruction, SubsetChoiceMethod
 from elemelek.settings import ELEMELEK_ARTIFACTS_PATH, Egg
 from elemelek.utils import calculate_file_md5, get_samples_per_group
+from transformers import AutoTokenizer
 
 
 class Elemelek(SelfLogging):
@@ -164,14 +165,28 @@ class Elemelek(SelfLogging):
         output_file_path: str,
         indices: Optional[List[int]] = None,
         include_features: bool = False,
+        use_chat_template_from: Optional[str] = "Facebook/blenderbot-400M-distill",
     ):
+        tokenizer = None
+        if use_chat_template_from:
+            tokenizer = AutoTokenizer.from_pretrained(use_chat_template_from)
         with jsonlines.open(output_file_path, "w") as jsonl_f:
+
+            def __process_instruction(e):
+                elem_dict = e.to_dict(include_features=include_features)
+                if tokenizer:
+                    __instruction_text = tokenizer.apply_chat_template(
+                        e.to_conversation_dict(), tokenize=False
+                    )
+                    elem_dict |= {"__instruction_text": __instruction_text}
+                jsonl_f.write(elem_dict)
+
             if indices:
                 for elem in self.db.yield_subset(indices):
-                    jsonl_f.write(elem.to_dict(include_features=include_features))
+                    __process_instruction(elem)
             else:
                 for elem in self.db:
-                    jsonl_f.write(elem.to_dict(include_features=include_features))
+                    __process_instruction(elem)
 
 
 class ElemelekSample(SelfLogging):
@@ -291,9 +306,15 @@ class ElemelekSample(SelfLogging):
     def to_pandas(self, include_features: bool = True):
         self.elemelek.to_pandas(self.ids, include_features=include_features)
 
-    def to_jsonl(self, output_file_path: str, include_features: bool = False):
+    def to_jsonl(
+        self,
+        output_file_path: str,
+        include_features: bool = False,
+        use_chat_template_from: Optional[str] = "Facebook/blenderbot-400M-distill",
+    ):
         self.elemelek.to_jsonl(
             output_file_path=output_file_path,
             indices=self.ids,
             include_features=include_features,
+            use_chat_template_from=use_chat_template_from,
         )

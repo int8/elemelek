@@ -1,7 +1,7 @@
 import dataclasses
 import enum
 from functools import cached_property
-from typing import Optional, Any, List, Callable
+from typing import Optional, Any, List, Callable, Dict
 
 
 @dataclasses.dataclass
@@ -61,6 +61,12 @@ class Instruction:
             if include_features
             else {}
         )
+
+    def to_conversation_dict(self) -> List[Dict]:
+        return [
+            {"role": "user", "content": f"{self.instruction}: {self.input}"},
+            {"role": "assistant", "content": self.output},
+        ]
 
     @cached_property
     def _features_dict(self):
