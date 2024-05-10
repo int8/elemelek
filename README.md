@@ -63,7 +63,7 @@ elemelek = Elemelek(egg)
 Once your dataset is built you can start sampling
 
 ```python
-from elemelek.settings import RERANKER_RELEVANCE_SCORE, IS_QUESTION
+from elemelek.features import RERANKER_RELEVANCE_SCORE, IS_QUESTION
 from elemelek.model import SubsetChoiceMethod
 
 # start sampling 
