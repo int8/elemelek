@@ -171,22 +171,21 @@ class Elemelek(SelfLogging):
         if use_chat_template_from:
             tokenizer = AutoTokenizer.from_pretrained(use_chat_template_from)
         with jsonlines.open(output_file_path, "w") as jsonl_f:
+            if not indices:
+                indices = self.db.ids
 
-            def __process_instruction(e):
-                elem_dict = e.to_dict(include_features=include_features)
+            for elem in tqdm(
+                self.db.yield_subset(indices),
+                total=len(indices),
+                desc="saving to jsonl",
+            ):
+                elem_dict = elem.to_dict(include_features=include_features)
                 if tokenizer:
                     __instruction_text = tokenizer.apply_chat_template(
-                        e.to_conversation_dict(), tokenize=False
+                        elem.to_conversation_dict(), tokenize=False
                     )
                     elem_dict |= {"__instruction_text": __instruction_text}
                 jsonl_f.write(elem_dict)
-
-            if indices:
-                for elem in self.db.yield_subset(indices):
-                    __process_instruction(elem)
-            else:
-                for elem in self.db:
-                    __process_instruction(elem)
 
 
 class ElemelekSample(SelfLogging):

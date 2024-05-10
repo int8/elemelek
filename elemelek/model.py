@@ -64,7 +64,7 @@ class Instruction:
 
     def to_conversation_dict(self) -> List[Dict]:
         return [
-            {"role": "user", "content": f"{self.instruction}: {self.input}"},
+            {"role": "user", "content": f"{self.instruction} \n {self.input}"},
             {"role": "assistant", "content": self.output},
         ]
 
