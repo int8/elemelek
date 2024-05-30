@@ -1,12 +1,11 @@
 import dataclasses
 import json
-import math
 import os
 import random
 import shutil
+
 from functools import cached_property
 from typing import List, Sequence, Set
-
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -26,7 +25,7 @@ from tqdm import tqdm
 
 
 @dataclasses.dataclass
-class InstructionsCluster:
+class InstructionsCluster(Sequence, SelfLogging):
     centroid_id: int
     elements_ids: List[int]
 
@@ -39,58 +38,74 @@ class InstructionsCluster:
             elements_ids=[e for e in self.elements_ids if e in ids],
         )
 
-    def random_sample(self, n: int):
+    def random_sample(self, n: int) -> List[int]:
         return random.sample(self.elements_ids, n)
+
+    def get_distance_matrix(self, index: "InstructionsSemanticIndex"):
+        distance_matrix = np.zeros(
+            shape=(len(self.elements_ids), len(self.elements_ids))
+        )
+        indices_left = []
+        indices_right = []
+        left = []
+        right = []
+        for i, idx_i in enumerate(self.elements_ids):
+            for j, idx_j in enumerate(self.elements_ids):
+                if i > j:
+                    continue
+                indices_left.append(i)
+                indices_right.append(j)
+                left.append(idx_i)
+                right.append(idx_j)
+
+        distance_matrix[indices_left, indices_right] = index.index.pairwise_distance(
+            left, right
+        )
+        distance_matrix += distance_matrix.T
+        np.fill_diagonal(distance_matrix, 0)
+        return distance_matrix
 
     def get_semantically_similar_sample(
         self,
         index: "InstructionsSemanticIndex",
         k: int,
-        target_similarity_median: float,
-    ) -> "InstructionsCluster":
-        similarity_matrix = index.index.pairwise_distance(
-            self.elements_ids, self.elements_ids
-        )
-        ga = OptimalSubsetGeneticAlgorithm(
-            similarity_matrix,
-            target_similarity_median,
-            population_size=100,
-            sample_size=k - 1,
-            generations=25,
-            mutation_rate=0.1,
-        )
-        solution = ga.optimize()
-        return InstructionsCluster(
-            centroid_id=self.centroid_id, elements_ids=solution + [self.centroid_id]
-        )
+        within_cluster_diversity_factor: float,
+    ) -> List[int]:
+        if 0 > k > len(self):
+            raise ValueError(
+                f"Cannot sample {k} elements from cluster of size {len(self)}"
+            )
+        if k == 1:
+            return [random.choice(self.elements_ids)]
+        elif k == len(self):
+            return self.elements_ids
+        else:
+            distance_matrix = self.get_distance_matrix(index)
+            target_distance = np.quantile(
+                distance_matrix[np.triu(distance_matrix, k=1).nonzero()],
+                within_cluster_diversity_factor,
+            )
+
+            ga = OptimalSubsetGeneticAlgorithm(
+                distance_matrix,
+                target_distance=target_distance,
+                population_size=100,
+                sample_size=k,
+                generations=50,
+                mutation_rate=0.1,
+            )
+            solution = ga.optimize()
+
+            optimal_elements_ids = [self.elements_ids[i] for i in solution]
+
+            assert len(optimal_elements_ids) == k
+            return optimal_elements_ids
 
     def __len__(self):
         return len(self.elements_ids)
 
-    @staticmethod
-    def get_samples_per_cluster(
-        clustering: List["InstructionsCluster"], k: int
-    ) -> List[int]:
-        num_clusters = len(clustering)
-        ideal_samples_per_cluster = math.floor(k / num_clusters)
-
-        num_per_cluster = [
-            min(len(cluster), ideal_samples_per_cluster) for cluster in clustering
-        ]
-
-        total_samples_from_uniform = sum(num_per_cluster)
-
-        remaining_samples = k - total_samples_from_uniform
-
-        while remaining_samples > 0:
-            for i, cluster in enumerate(clustering):
-                if num_per_cluster[i] < len(cluster) and remaining_samples > 0:
-                    num_per_cluster[i] += 1
-                    remaining_samples -= 1
-                if remaining_samples <= 0:
-                    break
-
-        return num_per_cluster
+    def __getitem__(self, index: int) -> int:
+        return self.elements_ids[index]
 
 
 class InstructionsSemanticIndex(SelfLogging):

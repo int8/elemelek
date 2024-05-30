@@ -1,7 +1,7 @@
 import dataclasses
 import enum
 from functools import cached_property
-from typing import Optional, Any, List, Callable
+from typing import Optional, Any, List, Callable, Dict
 
 
 @dataclasses.dataclass
@@ -47,16 +47,26 @@ class Instruction:
     def is_question(self) -> bool:
         return self.instruction.strip().endswith("?")
 
-    def to_flat_dict(self):
+    def to_dict(self, include_features: bool = False):
         return {
             "id": self.id,
             "instruction": self.instruction,
             "input": self.input,
             "output": self.output,
-        } | {
-            f"feature_{feature.name}": feature.value
-            for feature in self.features or dict()
-        }
+        } | (
+            {
+                f"feature_{feature.name}": feature.value
+                for feature in self.features or dict()
+            }
+            if include_features
+            else {}
+        )
+
+    def to_conversation_dict(self) -> List[Dict]:
+        return [
+            {"role": "user", "content": f"{self.instruction} \n {self.input}"},
+            {"role": "assistant", "content": self.output},
+        ]
 
     @cached_property
     def _features_dict(self):
@@ -74,7 +84,7 @@ class CustomExtractorDefinition:
 
 class SubsetChoiceMethod(enum.Enum):
     RANDOM = "RANDOM"
-    TARGET_MEDIAN_SIMILARITY = "TARGET_MEDIAN_SIMILARITY"
+    VARIABILITY_FACTOR = "VARIABILITY_FACTOR"
 
 
 class EmbeddingComputationStrategy(enum.Enum):

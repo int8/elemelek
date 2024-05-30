@@ -1,7 +1,8 @@
 import hashlib
+import math
 
 from collections import Counter
-from typing import List, Dict
+from typing import List, Dict, Sequence
 
 import language_tool_python
 
@@ -63,3 +64,30 @@ def language_tool_scan(
             language_tool.close()
 
     return results
+
+
+def get_samples_per_group(groups: List[Sequence], k: int) -> List[int]:
+    num_groups = len(groups)
+    ideal_samples_per_group = math.floor(k / num_groups)
+
+    num_per_group = [min(len(g), ideal_samples_per_group) for g in groups]
+
+    total_samples_from_uniform = sum(num_per_group)
+
+    remaining_samples = k - total_samples_from_uniform
+
+    while remaining_samples > 0:
+        for i, group in enumerate(groups):
+            if num_per_group[i] < len(group) and remaining_samples > 0:
+                num_per_group[i] += 1
+                remaining_samples -= 1
+            if remaining_samples <= 0:
+                break
+
+    return num_per_group
+
+
+def compute_df_row_md5(row):
+    str_to_hash = "".join(row)
+    result = hashlib.md5(str_to_hash.encode())
+    return result.hexdigest()

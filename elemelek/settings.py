@@ -26,21 +26,11 @@ INPUT_FIELD = "input"
 OUTPUT_FIELD = "output"
 MANDATORY_FIELDS = {INSTRUCTION_FIELD, INPUT_FIELD, OUTPUT_FIELD}
 
-RERANKER_RELEVANCE_SCORE = "reranker-relevance-score"
-LANGUAGE_TOOL_CHECK = "language_tool_check"
-MEDIAN_WORD_LENGTH = "median_word_length"
-QUANTILE_WORD_LENGTH_09 = "quantile_0.9_word_length"
-QUANTILE_WORD_LENGTH_01 = "quantile_0.1_word_length"
-TOTAL_LENGTH = "total_length"
-IS_QUESTION = "is_question"
-HAS_INPUT = "has_input"
-NUMERIC_CHARS_RATIO = "numeric_chars_ratio"
-NON_ALPHA_NUMERIC_CHARS_RATIO = "non_alpha_numeric_chars_ratio"
-
 
 @dataclasses.dataclass
 class DBConfig:
     database_insert_batch_size: int
+    remove_duplicates: bool
 
 
 @dataclasses.dataclass
@@ -77,6 +67,7 @@ class FeaturesConfig:
 
 @dataclasses.dataclass
 class Egg:
+    path: str
     dataset_jsonl_path: str
     db: DBConfig
     semantic_index: SemanticIndexConfig
@@ -87,6 +78,7 @@ class Egg:
         with open(path, "r") as file:
             config_data = yaml.safe_load(file)
         return cls(
+            path=path,
             dataset_jsonl_path=config_data["dataset_jsonl_path"],
             db=DBConfig(**config_data["db"]),
             semantic_index=SemanticIndexConfig(**config_data["semantic_index"]),
