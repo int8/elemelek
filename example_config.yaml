@@ -1,4 +1,4 @@
-dataset_jsonl_path: /home/kamil/Downloads/xxx.jsonl
+dataset_jsonl_path: /path/to/jsonl/file.jsonl
 data:
   database_insert_batch_size: 100
   remove_duplicates: true
