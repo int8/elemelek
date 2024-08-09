@@ -21,6 +21,7 @@ ELEMELEK_ARTIFACTS_PATH = os.getenv(
 if not os.path.exists(ELEMELEK_ARTIFACTS_PATH):
     os.makedirs(ELEMELEK_ARTIFACTS_PATH, exist_ok=True)
 
+LANGUAGE_TOOL_CHECK = "language-tool-check"
 INSTRUCTION_FIELD = "instruction"
 INPUT_FIELD = "input"
 OUTPUT_FIELD = "output"
